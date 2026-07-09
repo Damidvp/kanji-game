@@ -57,8 +57,8 @@ export function LobbyScreen() {
   }
 
   function launchGame() {
-    if (gameMode !== 'quiz') return // mini-jeu Écriture pas encore branché
-    navigate(`/lobby/${code}/quiz`, {
+    const path = gameMode === 'quiz' ? `/lobby/${code}/quiz` : `/lobby/${code}/ecriture`
+    navigate(path, {
       state: {
         levels: orderedSelectedLevels.map((l) => l.id),
         questionCount,
@@ -206,13 +206,7 @@ export function LobbyScreen() {
             </select>
           </div>
 
-          <Button
-            variant="accent"
-            className={styles.launchButton}
-            onClick={launchGame}
-            disabled={gameMode !== 'quiz'}
-            title={gameMode !== 'quiz' ? 'Mini-jeu Écriture bientôt disponible' : undefined}
-          >
+          <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
             Lancer la partie
           </Button>
         </div>

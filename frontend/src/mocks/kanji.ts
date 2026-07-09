@@ -67,3 +67,12 @@ export function buildQuizQuestions(levels: JlptLevelId[], count: number): QuizQu
   }
   return questions
 }
+
+// Génère `count` kanji à tracer à partir des niveaux sélectionnés (mini-jeu Écriture).
+export function buildWritingRounds(levels: JlptLevelId[], count: number): MockKanji[] {
+  let pool = mockKanjiPool.filter((k) => levels.includes(k.jlptLevel))
+  if (pool.length === 0) pool = mockKanjiPool
+
+  const shuffledPool = shuffle(pool)
+  return Array.from({ length: count }, (_, i) => shuffledPool[i % shuffledPool.length])
+}

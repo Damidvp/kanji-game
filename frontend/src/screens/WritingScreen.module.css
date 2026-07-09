@@ -1,0 +1,259 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 40px 60px 80px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 24px;
+}
+
+.progressText {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.quitButton {
+  padding: 10px 20px;
+  font-size: 13px;
+}
+
+.quitButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.statsRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 34px;
+}
+
+.statBox {
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  padding: 14px 28px;
+  text-align: center;
+  min-width: 140px;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.statBoxUrgent {
+  border-color: var(--color-accent);
+  background: var(--color-error-bg);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.statValue {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.statValueUrgent {
+  color: var(--color-accent);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+}
+
+.sectionLabel {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.hintsCard {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  padding: 30px;
+}
+
+.hintLabel {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.hintValue {
+  font-size: 20px;
+  margin-bottom: 22px;
+}
+
+.hintValueLast {
+  font-size: 20px;
+}
+
+.actionsRow {
+  margin-top: 20px;
+  display: flex;
+  gap: 14px;
+}
+
+.actionsRow > * {
+  flex: 1;
+}
+
+.scoreNote {
+  margin-top: 20px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-success-border);
+}
+
+.nextRow {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.canvasColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.canvasFrame {
+  position: relative;
+  width: 380px;
+  height: 380px;
+  background: var(--color-white);
+  border: 1px solid var(--color-ink);
+  max-width: 100%;
+}
+
+.guideVertical {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, #c7bfaf 0 6px, transparent 6px 12px);
+}
+
+.guideHorizontal {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: repeating-linear-gradient(to right, #c7bfaf 0 6px, transparent 6px 12px);
+}
+
+.referenceKanji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 260px;
+  color: var(--color-ink);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.canvasHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 24px 24px 60px;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .progressTrack {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .canvasFrame {
+    width: 100%;
+    max-width: 380px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+.endCard {
+  max-width: 480px;
+  margin: 120px auto;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.endTitle {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 34px;
+  margin: 0 0 12px;
+}
+
+.endSubtitle {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  margin-bottom: 34px;
+}
+
+.endActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
