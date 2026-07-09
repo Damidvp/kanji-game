@@ -3,8 +3,13 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { buildWritingRounds } from '../mocks/kanji'
+import { mockLobbyPlayers } from '../mocks/lobby'
 import type { JlptLevelId } from '../mocks/jlptLevels'
 import styles from './WritingScreen.module.css'
+
+// Les autres joueurs du salon (mock) : même simulation que le Quiz Kanji, pour prévisualiser
+// le comportement "on attend tout le monde" du futur mode multijoueur réel.
+const botPlayers = mockLobbyPlayers.filter((p) => !p.isYou)
 
 interface WritingLocationState {
   levels?: JlptLevelId[]
@@ -17,6 +22,13 @@ const DEFAULT_QUESTION_COUNT = 10
 const DEFAULT_TIME_PER_QUESTION = 30
 const URGENT_THRESHOLD_SECONDS = 5
 const CANVAS_SIZE = 380
+const AUTO_ADVANCE_SECONDS = 10
+const LEAVE_CHANCE = 0.08
+
+interface BotResult {
+  status: 'answered' | 'left'
+  score: number
+}
 
 // Heuristique V1 (sans HanziWriter/KanjiVG) : on compare les pixels tracés par le joueur à
 // ceux du kanji imprimé en police Shippori Mincho, en offscreen. Ce n'est PAS une vraie
@@ -68,10 +80,14 @@ export function WritingScreen() {
   const [rounds, setRounds] = useState(() => buildWritingRounds(levels, questionCount))
   const [index, setIndex] = useState(0)
   const [validated, setValidated] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
   const [lastScore, setLastScore] = useState<number | null>(null)
   const [scores, setScores] = useState<number[]>([])
   const [hasDrawn, setHasDrawn] = useState(false)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
+  const [botAnswers, setBotAnswers] = useState<Record<string, BotResult>>({})
+  const [leftPlayerIds, setLeftPlayerIds] = useState<Set<string>>(new Set())
+  const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef(false)
@@ -80,10 +96,12 @@ export function WritingScreen() {
   const current = rounds[index]
   const finished = index >= rounds.length
   const isLastRound = index === rounds.length - 1
-  const showReference = current && (current.jlptLevel === 'N5' || current.jlptLevel === 'N4')
   const averageScore = scores.length
     ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
     : 0
+  const botsResolved = botPlayers.filter((p) => p.id in botAnswers)
+  const allBotsResolved = botsResolved.length === botPlayers.length
+  const canAdvance = validated && (allBotsResolved || timedOut)
 
   useEffect(() => {
     setTimeLeft(timePerQuestion)
@@ -96,6 +114,7 @@ export function WritingScreen() {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timer)
+          setTimedOut(true)
           validateStroke()
           return 0
         }
@@ -105,6 +124,66 @@ export function WritingScreen() {
     return () => clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, validated])
+
+  // Simule les autres joueurs du salon : chacun termine son tracé avec un délai aléatoire, ou
+  // quitte la partie (~8% de chance) — un joueur ayant quitté ne participe plus aux kanji suivants.
+  useEffect(() => {
+    setBotAnswers(() => {
+      const initial: Record<string, BotResult> = {}
+      botPlayers.forEach((p) => {
+        if (leftPlayerIds.has(p.id)) initial[p.id] = { status: 'left', score: 0 }
+      })
+      return initial
+    })
+    const maxDelayMs = Math.max(1200, timePerQuestion * 1000 - 1500)
+    const timeouts = botPlayers
+      .filter((p) => !leftPlayerIds.has(p.id))
+      .map((p) => {
+        const delay = 800 + Math.random() * maxDelayMs
+        return setTimeout(() => {
+          if (Math.random() < LEAVE_CHANCE) {
+            setLeftPlayerIds((prev) => new Set(prev).add(p.id))
+            setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'left', score: 0 } }))
+            return
+          }
+          const score = Math.round(35 + Math.random() * 60)
+          setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'answered', score } }))
+        }, delay)
+      })
+    return () => timeouts.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
+
+  // Quand le temps est écoulé, on force la résolution des joueurs restants (minuteur commun).
+  useEffect(() => {
+    if (!timedOut) return
+    setBotAnswers((prev) => {
+      const next = { ...prev }
+      botPlayers.forEach((p) => {
+        if (!(p.id in next)) next[p.id] = { status: 'answered', score: 0 }
+      })
+      return next
+    })
+  }, [timedOut])
+
+  // Si personne (l'hôte) ne clique sur "Kanji suivant", on avance automatiquement au bout de
+  // quelques secondes pour ne pas bloquer toute la salle.
+  useEffect(() => {
+    if (!canAdvance) {
+      setAutoAdvanceLeft(null)
+      return
+    }
+    setAutoAdvanceLeft(AUTO_ADVANCE_SECONDS)
+    const interval = setInterval(() => {
+      setAutoAdvanceLeft((t) => (t !== null && t > 1 ? t - 1 : 0))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [canAdvance])
+
+  useEffect(() => {
+    if (autoAdvanceLeft === 0) nextRound()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvanceLeft])
 
   function getCanvasPoint(e: ReactPointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!
@@ -161,6 +240,7 @@ export function WritingScreen() {
   function nextRound() {
     setIndex((i) => i + 1)
     setValidated(false)
+    setTimedOut(false)
     setLastScore(null)
     setHasDrawn(false)
   }
@@ -169,6 +249,7 @@ export function WritingScreen() {
     setRounds(buildWritingRounds(levels, questionCount))
     setIndex(0)
     setValidated(false)
+    setTimedOut(false)
     setLastScore(null)
     setScores([])
     setHasDrawn(false)
@@ -242,6 +323,28 @@ export function WritingScreen() {
         </div>
       </div>
 
+      <div className={styles.playersStrip}>
+        {botPlayers.map((p) => {
+          const result = botAnswers[p.id]
+          const hasLeft = result?.status === 'left'
+          const hasAnswered = result?.status === 'answered'
+          let chipClass = styles.playerChip
+          if (hasAnswered) chipClass = `${styles.playerChip} ${styles.playerChipAnswered}`
+          if (hasLeft) chipClass = `${styles.playerChip} ${styles.playerChipLeft}`
+          return (
+            <div key={p.id} className={chipClass}>
+              <span className={styles.playerChipAvatar} style={{ background: p.color }}>
+                {p.initials}
+              </span>
+              <span className={hasLeft ? styles.playerChipNameLeft : undefined}>{p.name}</span>
+              <span className={styles.playerChipStatus}>
+                {hasLeft ? '✕ A quitté' : hasAnswered ? `✓ ${result.score}%` : 'trace...'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
       <div className={styles.body}>
         <div>
           <div className={styles.sectionLabel}>INDICES</div>
@@ -266,8 +369,19 @@ export function WritingScreen() {
             <div className={styles.scoreNote}>{lastScore}% de ressemblance</div>
           )}
 
-          {validated && (
+          {validated && !canAdvance && (
+            <div className={styles.waitingNote}>
+              En attente des autres joueurs... ({botsResolved.length}/{botPlayers.length})
+            </div>
+          )}
+
+          {canAdvance && (
             <div className={styles.nextRow}>
+              {autoAdvanceLeft !== null && (
+                <span className={styles.autoAdvanceNote}>
+                  Passage automatique dans {autoAdvanceLeft}s
+                </span>
+              )}
               <Button variant="primary" onClick={nextRound}>
                 {isLastRound ? 'Voir les résultats →' : 'Kanji suivant →'}
               </Button>
@@ -280,7 +394,6 @@ export function WritingScreen() {
           <div className={styles.canvasFrame}>
             <div className={styles.guideVertical} />
             <div className={styles.guideHorizontal} />
-            {showReference && <div className={styles.referenceKanji}>{current.character}</div>}
             <canvas
               ref={canvasRef}
               width={CANVAS_SIZE}

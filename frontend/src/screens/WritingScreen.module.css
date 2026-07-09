@@ -83,6 +83,79 @@
   color: var(--color-accent);
 }
 
+.playersStrip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+
+.playerChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.playerChipAnswered {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.playerChipLeft {
+  border-color: var(--color-border);
+  background: #f0ece4;
+  opacity: 0.6;
+}
+
+.playerChipNameLeft {
+  text-decoration: line-through;
+}
+
+.playerChipAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-serif);
+}
+
+.playerChipStatus {
+  color: var(--color-text-tertiary);
+}
+
+.playerChipAnswered .playerChipStatus {
+  color: var(--color-success-border);
+  font-weight: 700;
+}
+
+.playerChipLeft .playerChipStatus {
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+
+.waitingNote {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.autoAdvanceNote {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 .body {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -137,7 +210,10 @@
 
 .nextRow {
   margin-top: 20px;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
 }
 
 .canvasColumn {
@@ -171,19 +247,6 @@
   right: 0;
   height: 1px;
   background: repeating-linear-gradient(to right, #c7bfaf 0 6px, transparent 6px 12px);
-}
-
-.referenceKanji {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-serif);
-  font-size: 260px;
-  color: var(--color-ink);
-  opacity: 0.06;
-  pointer-events: none;
 }
 
 .canvas {
