@@ -72,6 +72,58 @@
   color: var(--color-accent);
 }
 
+.playersStrip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+
+.playerChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.playerChipAnswered {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.playerChipAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-serif);
+}
+
+.playerChipStatus {
+  color: var(--color-text-tertiary);
+}
+
+.playerChipAnswered .playerChipStatus {
+  color: var(--color-success-border);
+  font-weight: 700;
+}
+
+.waitingNote {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
 .body {
   display: grid;
   grid-template-columns: 1fr 1fr;

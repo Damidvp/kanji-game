@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { buildQuizQuestions } from '../mocks/kanji'
+import { mockLobbyPlayers } from '../mocks/lobby'
 import type { JlptLevelId } from '../mocks/jlptLevels'
 import styles from './QuizScreen.module.css'
+
+// Les autres joueurs du salon (mock) : simulent une réponse avec un délai aléatoire pour
+// prévisualiser le comportement "on attend tout le monde" du futur mode multijoueur réel.
+const botPlayers = mockLobbyPlayers.filter((p) => !p.isYou)
 
 interface QuizLocationState {
   levels?: JlptLevelId[]
@@ -44,12 +49,16 @@ export function QuizScreen() {
   const [correctCount, setCorrectCount] = useState(0)
   const [lastPoints, setLastPoints] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
+  const [botAnswers, setBotAnswers] = useState<Record<string, number>>({})
   const questionStartRef = useRef(Date.now())
 
   const current = questions[index]
   const answered = selected !== null || timedOut
   const isLastQuestion = index === questions.length - 1
   const finished = index >= questions.length
+  const botsAnswered = botPlayers.filter((p) => p.id in botAnswers)
+  const allBotsAnswered = botsAnswered.length === botPlayers.length
+  const canAdvance = answered && (allBotsAnswered || timedOut)
 
   // Le temps ne se réinitialise que sur une nouvelle question, pas quand `answered` change.
   useEffect(() => {
@@ -72,6 +81,34 @@ export function QuizScreen() {
     }, 1000)
     return () => clearInterval(timer)
   }, [index, answered])
+
+  // Simule les autres joueurs du salon qui répondent avec un délai aléatoire (~75% de réussite).
+  useEffect(() => {
+    setBotAnswers({})
+    const maxDelayMs = Math.max(1200, timePerQuestion * 1000 - 1500)
+    const timeouts = botPlayers.map((p) => {
+      const delay = 800 + Math.random() * maxDelayMs
+      return setTimeout(() => {
+        const correct = Math.random() < 0.75
+        const points = correct ? Math.round(200 + Math.random() * 800) : 0
+        setBotAnswers((prev) => ({ ...prev, [p.id]: points }))
+      }, delay)
+    })
+    return () => timeouts.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
+
+  // Quand le temps est écoulé, on force la réponse des joueurs restants (comme un vrai minuteur commun).
+  useEffect(() => {
+    if (!timedOut) return
+    setBotAnswers((prev) => {
+      const next = { ...prev }
+      botPlayers.forEach((p) => {
+        if (!(p.id in next)) next[p.id] = 0
+      })
+      return next
+    })
+  }, [timedOut])
 
   function selectAnswer(option: string) {
     if (answered) return
@@ -155,6 +192,27 @@ export function QuizScreen() {
         </div>
       </div>
 
+      <div className={styles.playersStrip}>
+        {botPlayers.map((p) => {
+          const points = botAnswers[p.id]
+          const hasAnswered = points !== undefined
+          return (
+            <div
+              key={p.id}
+              className={hasAnswered ? `${styles.playerChip} ${styles.playerChipAnswered}` : styles.playerChip}
+            >
+              <span className={styles.playerChipAvatar} style={{ background: p.color }}>
+                {p.initials}
+              </span>
+              <span>{p.name}</span>
+              <span className={styles.playerChipStatus}>
+                {hasAnswered ? `✓ +${points} pts` : 'répond...'}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+
       <div className={styles.body}>
         <div className={styles.kanjiColumn}>
           <div className={styles.kanjiBig}>{current.kanji.character}</div>
@@ -204,7 +262,13 @@ export function QuizScreen() {
             </div>
           )}
 
-          {answered && (
+          {answered && !canAdvance && (
+            <div className={styles.waitingNote}>
+              En attente des autres joueurs... ({botsAnswered.length}/{botPlayers.length})
+            </div>
+          )}
+
+          {canAdvance && (
             <div className={styles.nextRow}>
               <Button variant="primary" onClick={nextQuestion}>
                 {isLastQuestion ? 'Voir les résultats →' : 'Question suivante →'}
