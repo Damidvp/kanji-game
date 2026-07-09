@@ -1,0 +1,184 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 40px 60px 80px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 34px;
+  gap: 24px;
+}
+
+.progressText {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.progressTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.2s ease;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.timer {
+  font-variant-numeric: tabular-nums;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.kanjiColumn {
+  text-align: center;
+}
+
+.kanjiBig {
+  font-family: var(--font-serif);
+  font-size: 220px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.readings {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 20px;
+  font-size: 15px;
+  color: var(--color-text-secondary);
+}
+
+.question {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 18px;
+}
+
+.optionsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.option {
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-ink);
+  padding: 22px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.option:not(:disabled):hover {
+  border-color: var(--color-ink);
+}
+
+.optionCorrect {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-border);
+}
+
+.optionWrong {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+  color: var(--color-error-border);
+}
+
+.optionDisabled {
+  color: #c2bcb0;
+}
+
+.timeoutNote {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--color-accent);
+}
+
+.nextRow {
+  margin-top: 26px;
+  text-align: right;
+}
+
+.endCard {
+  max-width: 480px;
+  margin: 120px auto;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.endTitle {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 34px;
+  margin: 0 0 12px;
+}
+
+.endSubtitle {
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  margin-bottom: 34px;
+}
+
+.endActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 24px 24px 60px;
+  }
+
+  .body {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .kanjiBig {
+    font-size: 140px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+  }
+
+  .progressTrack {
+    order: 3;
+    flex-basis: 100%;
+  }
+}

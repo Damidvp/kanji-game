@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { mockLobbyPlayers, LOBBY_MAX_PLAYERS, type LobbyPlayer } from '../mocks/lobby'
@@ -22,6 +22,7 @@ const timePerQuestionOptions = Array.from({ length: 9 }, (_, i) => (i + 1) * 10)
 
 export function LobbyScreen() {
   const { code = 'AB3F9K' } = useParams()
+  const navigate = useNavigate()
   const [players, setPlayers] = useState<LobbyPlayer[]>(mockLobbyPlayers)
   const [gameMode, setGameMode] = useState<GameMode>('quiz')
   const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(new Set(['N5', 'N4']))
@@ -52,6 +53,17 @@ export function LobbyScreen() {
         next.add(id)
       }
       return next
+    })
+  }
+
+  function launchGame() {
+    if (gameMode !== 'quiz') return // mini-jeu Écriture pas encore branché
+    navigate(`/lobby/${code}/quiz`, {
+      state: {
+        levels: orderedSelectedLevels.map((l) => l.id),
+        questionCount,
+        timePerQuestion,
+      },
     })
   }
 
@@ -194,7 +206,13 @@ export function LobbyScreen() {
             </select>
           </div>
 
-          <Button variant="accent" className={styles.launchButton}>
+          <Button
+            variant="accent"
+            className={styles.launchButton}
+            onClick={launchGame}
+            disabled={gameMode !== 'quiz'}
+            title={gameMode !== 'quiz' ? 'Mini-jeu Écriture bientôt disponible' : undefined}
+          >
             Lancer la partie
           </Button>
         </div>
