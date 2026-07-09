@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { buildQuizQuestions } from '../mocks/kanji'
@@ -14,6 +14,17 @@ interface QuizLocationState {
 const DEFAULT_LEVELS: JlptLevelId[] = ['N5', 'N4']
 const DEFAULT_QUESTION_COUNT = 10
 const DEFAULT_TIME_PER_QUESTION = 30
+const URGENT_THRESHOLD_SECONDS = 5
+const MAX_POINTS_PER_QUESTION = 1000
+const MIN_POINTS_PER_QUESTION = 1
+
+// Score façon Kahoot : plus la réponse est rapide, plus elle rapporte de points (1 à 1000).
+// Calculé côté client ici (V1 solo/mock) ; en multijoueur réel, ce calcul devra être fait
+// côté serveur à partir de l'horodatage d'envoi de la question, pour ne pas se fier au client.
+function computePoints(elapsedMs: number, timeLimitSeconds: number): number {
+  const ratio = Math.min(1, elapsedMs / (timeLimitSeconds * 1000))
+  return Math.round(MAX_POINTS_PER_QUESTION - (MAX_POINTS_PER_QUESTION - MIN_POINTS_PER_QUESTION) * ratio)
+}
 
 export function QuizScreen() {
   const { code = 'AB3F9K' } = useParams()
@@ -30,7 +41,10 @@ export function QuizScreen() {
   const [selected, setSelected] = useState<string | null>(null)
   const [timedOut, setTimedOut] = useState(false)
   const [score, setScore] = useState(0)
+  const [correctCount, setCorrectCount] = useState(0)
+  const [lastPoints, setLastPoints] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
+  const questionStartRef = useRef(Date.now())
 
   const current = questions[index]
   const answered = selected !== null || timedOut
@@ -40,6 +54,7 @@ export function QuizScreen() {
   // Le temps ne se réinitialise que sur une nouvelle question, pas quand `answered` change.
   useEffect(() => {
     setTimeLeft(timePerQuestion)
+    questionStartRef.current = Date.now()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index])
 
@@ -61,13 +76,21 @@ export function QuizScreen() {
   function selectAnswer(option: string) {
     if (answered) return
     setSelected(option)
-    if (option === current.correctAnswer) setScore((s) => s + 1)
+    if (option === current.correctAnswer) {
+      const points = computePoints(Date.now() - questionStartRef.current, timePerQuestion)
+      setScore((s) => s + points)
+      setCorrectCount((c) => c + 1)
+      setLastPoints(points)
+    } else {
+      setLastPoints(0)
+    }
   }
 
   function nextQuestion() {
     setIndex((i) => i + 1)
     setSelected(null)
     setTimedOut(false)
+    setLastPoints(null)
   }
 
   function restart() {
@@ -76,18 +99,20 @@ export function QuizScreen() {
     setSelected(null)
     setTimedOut(false)
     setScore(0)
+    setCorrectCount(0)
+    setLastPoints(null)
   }
 
   if (finished) {
-    const percent = Math.round((score / questions.length) * 100)
+    const percent = Math.round((correctCount / questions.length) * 100)
     return (
       <div className={styles.page}>
         <div className={styles.endCard}>
           <div className={styles.eyebrow}>QUIZ TERMINÉ</div>
-          <h1 className={styles.endTitle}>
-            Score : {score} / {questions.length}
-          </h1>
-          <p className={styles.endSubtitle}>{percent}% de bonnes réponses</p>
+          <h1 className={styles.endTitle}>{score} points</h1>
+          <p className={styles.endSubtitle}>
+            {correctCount} / {questions.length} bonnes réponses ({percent}%)
+          </p>
           <div className={styles.endActions}>
             <Button variant="primary" onClick={restart}>
               Rejouer
@@ -101,6 +126,8 @@ export function QuizScreen() {
     )
   }
 
+  const timerUrgent = timeLeft <= URGENT_THRESHOLD_SECONDS && !answered
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -113,11 +140,18 @@ export function QuizScreen() {
             style={{ width: `${((index + 1) / questions.length) * 100}%` }}
           />
         </div>
-        <div className={styles.meta}>
-          <span className={styles.timer}>⏱ {timeLeft}s</span>
-          <span>
-            Score : <strong>{score}</strong>
-          </span>
+      </div>
+
+      <div className={styles.statsRow}>
+        <div className={timerUrgent ? `${styles.statBox} ${styles.statBoxUrgent}` : styles.statBox}>
+          <div className={styles.statLabel}>TEMPS RESTANT</div>
+          <div className={timerUrgent ? `${styles.statValue} ${styles.statValueUrgent}` : styles.statValue}>
+            {timeLeft}s
+          </div>
+        </div>
+        <div className={styles.statBox}>
+          <div className={styles.statLabel}>SCORE</div>
+          <div className={styles.statValue}>{score}</div>
         </div>
       </div>
 
@@ -163,6 +197,12 @@ export function QuizScreen() {
           </div>
 
           {timedOut && !selected && <div className={styles.timeoutNote}>Temps écoulé !</div>}
+
+          {answered && lastPoints !== null && (
+            <div className={lastPoints > 0 ? styles.pointsNoteSuccess : styles.pointsNoteZero}>
+              {lastPoints > 0 ? `+${lastPoints} points` : '0 point'}
+            </div>
+          )}
 
           {answered && (
             <div className={styles.nextRow}>
