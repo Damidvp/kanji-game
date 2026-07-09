@@ -167,8 +167,11 @@ export function QuizScreen() {
   }
 
   function quitGame() {
-    if (window.confirm('Quitter la partie ? Votre progression sera perdue.')) {
-      navigate(`/lobby/${code}`)
+    // On ramène à l'accueil plutôt qu'au salon : le salon n'existe plus pour ce joueur une
+    // fois qu'il a quitté, et le laisser y retourner permettrait de relancer une partie
+    // sur un salon qu'il a abandonné (état incohérent une fois le multijoueur réel branché).
+    if (window.confirm('Quitter la partie ? Vous serez ramené à l\'accueil et votre progression sera perdue.')) {
+      navigate('/')
     }
   }
 
@@ -226,9 +229,9 @@ export function QuizScreen() {
             style={{ width: `${((index + 1) / questions.length) * 100}%` }}
           />
         </div>
-        <button type="button" className={styles.quitButton} onClick={quitGame}>
+        <Button variant="outline" className={styles.quitButton} onClick={quitGame}>
           Quitter la partie
-        </button>
+        </Button>
       </div>
 
       <div className={styles.statsRow}>
