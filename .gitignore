@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Backend (Java/Maven) - phase 2
+backend/target/
+backend/.mvn/
+*.class
+
+# Logs
+*.log
