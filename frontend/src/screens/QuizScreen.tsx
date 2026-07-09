@@ -22,6 +22,7 @@ const DEFAULT_TIME_PER_QUESTION = 30
 const URGENT_THRESHOLD_SECONDS = 5
 const MAX_POINTS_PER_QUESTION = 1000
 const MIN_POINTS_PER_QUESTION = 1
+const AUTO_ADVANCE_SECONDS = 10
 
 // Score façon Kahoot : plus la réponse est rapide, plus elle rapporte de points (1 à 1000).
 // Calculé côté client ici (V1 solo/mock) ; en multijoueur réel, ce calcul devra être fait
@@ -50,6 +51,7 @@ export function QuizScreen() {
   const [lastPoints, setLastPoints] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
   const [botAnswers, setBotAnswers] = useState<Record<string, number>>({})
+  const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null)
   const questionStartRef = useRef(Date.now())
 
   const current = questions[index]
@@ -109,6 +111,25 @@ export function QuizScreen() {
       return next
     })
   }, [timedOut])
+
+  // Si personne (l'hôte) ne clique sur "Question suivante", on avance automatiquement
+  // au bout de quelques secondes pour ne pas bloquer toute la salle.
+  useEffect(() => {
+    if (!canAdvance) {
+      setAutoAdvanceLeft(null)
+      return
+    }
+    setAutoAdvanceLeft(AUTO_ADVANCE_SECONDS)
+    const interval = setInterval(() => {
+      setAutoAdvanceLeft((t) => (t !== null && t > 1 ? t - 1 : 0))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [canAdvance])
+
+  useEffect(() => {
+    if (autoAdvanceLeft === 0) nextQuestion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAdvanceLeft])
 
   function selectAnswer(option: string) {
     if (answered) return
@@ -270,6 +291,11 @@ export function QuizScreen() {
 
           {canAdvance && (
             <div className={styles.nextRow}>
+              {autoAdvanceLeft !== null && (
+                <span className={styles.autoAdvanceNote}>
+                  Passage automatique dans {autoAdvanceLeft}s
+                </span>
+              )}
               <Button variant="primary" onClick={nextQuestion}>
                 {isLastQuestion ? 'Voir les résultats →' : 'Question suivante →'}
               </Button>
