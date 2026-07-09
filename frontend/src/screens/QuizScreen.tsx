@@ -23,6 +23,12 @@ const URGENT_THRESHOLD_SECONDS = 5
 const MAX_POINTS_PER_QUESTION = 1000
 const MIN_POINTS_PER_QUESTION = 1
 const AUTO_ADVANCE_SECONDS = 10
+const LEAVE_CHANCE = 0.08
+
+interface BotResult {
+  status: 'answered' | 'left'
+  points: number
+}
 
 // Score façon Kahoot : plus la réponse est rapide, plus elle rapporte de points (1 à 1000).
 // Calculé côté client ici (V1 solo/mock) ; en multijoueur réel, ce calcul devra être fait
@@ -50,7 +56,8 @@ export function QuizScreen() {
   const [correctCount, setCorrectCount] = useState(0)
   const [lastPoints, setLastPoints] = useState<number | null>(null)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
-  const [botAnswers, setBotAnswers] = useState<Record<string, number>>({})
+  const [botAnswers, setBotAnswers] = useState<Record<string, BotResult>>({})
+  const [leftPlayerIds, setLeftPlayerIds] = useState<Set<string>>(new Set())
   const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null)
   const questionStartRef = useRef(Date.now())
 
@@ -58,9 +65,9 @@ export function QuizScreen() {
   const answered = selected !== null || timedOut
   const isLastQuestion = index === questions.length - 1
   const finished = index >= questions.length
-  const botsAnswered = botPlayers.filter((p) => p.id in botAnswers)
-  const allBotsAnswered = botsAnswered.length === botPlayers.length
-  const canAdvance = answered && (allBotsAnswered || timedOut)
+  const botsResolved = botPlayers.filter((p) => p.id in botAnswers)
+  const allBotsResolved = botsResolved.length === botPlayers.length
+  const canAdvance = answered && (allBotsResolved || timedOut)
 
   // Le temps ne se réinitialise que sur une nouvelle question, pas quand `answered` change.
   useEffect(() => {
@@ -84,18 +91,33 @@ export function QuizScreen() {
     return () => clearInterval(timer)
   }, [index, answered])
 
-  // Simule les autres joueurs du salon qui répondent avec un délai aléatoire (~75% de réussite).
+  // Simule les autres joueurs du salon : chacun répond avec un délai aléatoire (~75% de
+  // réussite), ou quitte la partie (~8% de chance) — un joueur ayant quitté ne répond plus
+  // aux questions suivantes.
   useEffect(() => {
-    setBotAnswers({})
-    const maxDelayMs = Math.max(1200, timePerQuestion * 1000 - 1500)
-    const timeouts = botPlayers.map((p) => {
-      const delay = 800 + Math.random() * maxDelayMs
-      return setTimeout(() => {
-        const correct = Math.random() < 0.75
-        const points = correct ? Math.round(200 + Math.random() * 800) : 0
-        setBotAnswers((prev) => ({ ...prev, [p.id]: points }))
-      }, delay)
+    setBotAnswers(() => {
+      const initial: Record<string, BotResult> = {}
+      botPlayers.forEach((p) => {
+        if (leftPlayerIds.has(p.id)) initial[p.id] = { status: 'left', points: 0 }
+      })
+      return initial
     })
+    const maxDelayMs = Math.max(1200, timePerQuestion * 1000 - 1500)
+    const timeouts = botPlayers
+      .filter((p) => !leftPlayerIds.has(p.id))
+      .map((p) => {
+        const delay = 800 + Math.random() * maxDelayMs
+        return setTimeout(() => {
+          if (Math.random() < LEAVE_CHANCE) {
+            setLeftPlayerIds((prev) => new Set(prev).add(p.id))
+            setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'left', points: 0 } }))
+            return
+          }
+          const correct = Math.random() < 0.75
+          const points = correct ? Math.round(200 + Math.random() * 800) : 0
+          setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'answered', points } }))
+        }, delay)
+      })
     return () => timeouts.forEach(clearTimeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index])
@@ -106,7 +128,7 @@ export function QuizScreen() {
     setBotAnswers((prev) => {
       const next = { ...prev }
       botPlayers.forEach((p) => {
-        if (!(p.id in next)) next[p.id] = 0
+        if (!(p.id in next)) next[p.id] = { status: 'answered', points: 0 }
       })
       return next
     })
@@ -141,6 +163,12 @@ export function QuizScreen() {
       setLastPoints(points)
     } else {
       setLastPoints(0)
+    }
+  }
+
+  function quitGame() {
+    if (window.confirm('Quitter la partie ? Votre progression sera perdue.')) {
+      navigate(`/lobby/${code}`)
     }
   }
 
@@ -198,6 +226,9 @@ export function QuizScreen() {
             style={{ width: `${((index + 1) / questions.length) * 100}%` }}
           />
         </div>
+        <button type="button" className={styles.quitButton} onClick={quitGame}>
+          Quitter la partie
+        </button>
       </div>
 
       <div className={styles.statsRow}>
@@ -215,19 +246,20 @@ export function QuizScreen() {
 
       <div className={styles.playersStrip}>
         {botPlayers.map((p) => {
-          const points = botAnswers[p.id]
-          const hasAnswered = points !== undefined
+          const result = botAnswers[p.id]
+          const hasLeft = result?.status === 'left'
+          const hasAnswered = result?.status === 'answered'
+          let chipClass = styles.playerChip
+          if (hasAnswered) chipClass = `${styles.playerChip} ${styles.playerChipAnswered}`
+          if (hasLeft) chipClass = `${styles.playerChip} ${styles.playerChipLeft}`
           return (
-            <div
-              key={p.id}
-              className={hasAnswered ? `${styles.playerChip} ${styles.playerChipAnswered}` : styles.playerChip}
-            >
+            <div key={p.id} className={chipClass}>
               <span className={styles.playerChipAvatar} style={{ background: p.color }}>
                 {p.initials}
               </span>
-              <span>{p.name}</span>
+              <span className={hasLeft ? styles.playerChipNameLeft : undefined}>{p.name}</span>
               <span className={styles.playerChipStatus}>
-                {hasAnswered ? `✓ +${points} pts` : 'répond...'}
+                {hasLeft ? '✕ A quitté' : hasAnswered ? `✓ +${result.points} pts` : 'répond...'}
               </span>
             </div>
           )
@@ -285,7 +317,7 @@ export function QuizScreen() {
 
           {answered && !canAdvance && (
             <div className={styles.waitingNote}>
-              En attente des autres joueurs... ({botsAnswered.length}/{botPlayers.length})
+              En attente des autres joueurs... ({botsResolved.length}/{botPlayers.length})
             </div>
           )}
 

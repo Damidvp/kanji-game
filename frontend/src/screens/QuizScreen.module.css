@@ -32,6 +32,21 @@
   transition: width 0.2s ease;
 }
 
+.quitButton {
+  background: none;
+  border: 1px solid var(--color-border-input);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.quitButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .statsRow {
   display: flex;
   gap: 16px;
@@ -96,6 +111,16 @@
   background: var(--color-success-bg);
 }
 
+.playerChipLeft {
+  border-color: var(--color-border);
+  background: #f0ece4;
+  opacity: 0.6;
+}
+
+.playerChipNameLeft {
+  text-decoration: line-through;
+}
+
 .playerChipAvatar {
   width: 22px;
   height: 22px;
@@ -115,6 +140,11 @@
 
 .playerChipAnswered .playerChipStatus {
   color: var(--color-success-border);
+  font-weight: 700;
+}
+
+.playerChipLeft .playerChipStatus {
+  color: var(--color-text-tertiary);
   font-weight: 700;
 }
 
