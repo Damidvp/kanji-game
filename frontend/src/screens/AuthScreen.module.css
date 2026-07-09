@@ -1,0 +1,154 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+}
+
+.pitchColumn {
+  flex: 1;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  padding: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.pitchKanjiBg {
+  position: absolute;
+  right: -60px;
+  bottom: -60px;
+  font-family: var(--font-serif);
+  font-size: 340px;
+  opacity: 0.08;
+  line-height: 1;
+}
+
+.pitchTop,
+.pitchMiddle,
+.pitchFooter {
+  position: relative;
+  z-index: 1;
+}
+
+.pitchTitle {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 36px;
+  line-height: 1.3;
+  margin: 0 0 20px;
+}
+
+.pitchText {
+  font-size: 15px;
+  line-height: 1.7;
+  opacity: 0.75;
+  max-width: 360px;
+}
+
+.pitchFooter {
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.formColumn {
+  flex: 1;
+  padding: 70px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 44px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0 0 16px;
+  margin-right: 32px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+.tabActive {
+  border-bottom-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+.form {
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.input {
+  border: 1px solid var(--color-border-input);
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  font-size: 14px;
+  color: var(--color-ink);
+  background: var(--color-white);
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.input:focus {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--color-accent);
+  margin: -16px 0 18px;
+}
+
+.forgotPassword {
+  text-align: right;
+  font-size: 13px;
+  color: var(--color-accent);
+  margin-bottom: 26px;
+  cursor: default;
+}
+
+.submitButton {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.divider {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  .page {
+    flex-direction: column;
+  }
+
+  .pitchColumn,
+  .formColumn {
+    padding: 40px 24px;
+  }
+
+  .pitchColumn {
+    justify-content: flex-start;
+    gap: 32px;
+  }
+}

@@ -16,3 +16,12 @@
   letter-spacing: 0.08em;
   color: var(--color-text-secondary);
 }
+
+.inverted .kanji {
+  color: var(--color-paper);
+}
+
+.inverted .wordmark {
+  color: var(--color-paper);
+  opacity: 0.7;
+}
