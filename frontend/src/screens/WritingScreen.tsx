@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import HanziWriter from 'hanzi-writer'
 import { Button } from '../components/Button'
 import { buildWritingRounds } from '../mocks/kanji'
 import { mockLobbyPlayers } from '../mocks/lobby'
@@ -30,43 +30,6 @@ interface BotResult {
   score: number
 }
 
-// Heuristique V1 (sans HanziWriter/KanjiVG) : on compare les pixels tracés par le joueur à
-// ceux du kanji imprimé en police Shippori Mincho, en offscreen. Ce n'est PAS une vraie
-// reconnaissance d'ordre des traits (cf. specs — à remplacer par KanjiVG + HanziWriter en
-// phase 2), juste un score de ressemblance de forme pour rendre "Valider le tracé" testable.
-function computeSimilarity(canvas: HTMLCanvasElement, character: string): number {
-  const size = canvas.width
-  const reference = document.createElement('canvas')
-  reference.width = size
-  reference.height = size
-  const refCtx = reference.getContext('2d')!
-  refCtx.fillStyle = '#fff'
-  refCtx.fillRect(0, 0, size, size)
-  refCtx.fillStyle = '#000'
-  refCtx.font = `600 ${Math.round(size * 0.68)}px "Shippori Mincho", serif`
-  refCtx.textAlign = 'center'
-  refCtx.textBaseline = 'middle'
-  refCtx.fillText(character, size / 2, size / 2 + size * 0.02)
-
-  const refData = refCtx.getImageData(0, 0, size, size).data
-  const userData = canvas.getContext('2d')!.getImageData(0, 0, size, size).data
-
-  let refInk = 0
-  let userInk = 0
-  let overlap = 0
-  for (let i = 0; i < refData.length; i += 4) {
-    const isRefInk = refData[i] < 128
-    const isUserInk = userData[i + 3] > 10
-    if (isRefInk) refInk++
-    if (isUserInk) userInk++
-    if (isRefInk && isUserInk) overlap++
-  }
-  if (userInk === 0 || refInk === 0) return 0
-  const precision = overlap / userInk
-  const recall = overlap / refInk
-  return Math.max(0, Math.min(100, Math.round(((precision + recall) / 2) * 100)))
-}
-
 export function WritingScreen() {
   const { code = 'AB3F9K' } = useParams()
   const navigate = useNavigate()
@@ -83,15 +46,17 @@ export function WritingScreen() {
   const [timedOut, setTimedOut] = useState(false)
   const [lastScore, setLastScore] = useState<number | null>(null)
   const [scores, setScores] = useState<number[]>([])
-  const [hasDrawn, setHasDrawn] = useState(false)
   const [timeLeft, setTimeLeft] = useState(timePerQuestion)
+  const [strokeProgress, setStrokeProgress] = useState(0)
+  const [totalStrokesDisplay, setTotalStrokesDisplay] = useState<number | null>(null)
   const [botAnswers, setBotAnswers] = useState<Record<string, BotResult>>({})
   const [leftPlayerIds, setLeftPlayerIds] = useState<Set<string>>(new Set())
   const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null)
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const drawingRef = useRef(false)
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null)
+  const targetRef = useRef<HTMLDivElement>(null)
+  const writerRef = useRef<HanziWriter | null>(null)
+  const firstTryCorrectRef = useRef(0)
+  const totalStrokesRef = useRef(0)
 
   const current = rounds[index]
   const finished = index >= rounds.length
@@ -102,6 +67,62 @@ export function WritingScreen() {
   const botsResolved = botPlayers.filter((p) => p.id in botAnswers)
   const allBotsResolved = botsResolved.length === botPlayers.length
   const canAdvance = validated && (allBotsResolved || timedOut)
+
+  function finishRound() {
+    const total = totalStrokesRef.current || 1
+    const score = Math.round((firstTryCorrectRef.current / total) * 100)
+    setLastScore(score)
+    setScores((prev) => [...prev, score])
+    setValidated(true)
+  }
+
+  function startQuiz(writer: HanziWriter) {
+    writer.quiz({
+      onCorrectStroke: (strokeData) => {
+        if (strokeData.mistakesOnStroke === 0) firstTryCorrectRef.current += 1
+        setStrokeProgress(strokeData.strokeNum + 1)
+      },
+      onComplete: () => finishRound(),
+    })
+  }
+
+  // (Re)crée le writer HanziWriter — moteur réel de reconnaissance de tracé, basé sur les
+  // données KanjiVG (via le dataset "Make Me a Hanzi" qu'utilise HanziWriter, lui-même
+  // construit à partir de KanjiVG pour les kanji). Ni le kanji ni son contour ne sont
+  // affichés : le joueur doit l'écrire sans aide.
+  useEffect(() => {
+    if (!targetRef.current || !current) return
+    targetRef.current.innerHTML = ''
+    firstTryCorrectRef.current = 0
+    totalStrokesRef.current = 0
+    setStrokeProgress(0)
+    setTotalStrokesDisplay(null)
+
+    const writer = HanziWriter.create(targetRef.current, current.character, {
+      width: CANVAS_SIZE,
+      height: CANVAS_SIZE,
+      padding: 24,
+      showCharacter: false,
+      showOutline: false,
+      strokeColor: '#1B1B1B',
+      drawingColor: '#1B1B1B',
+      highlightColor: '#C0392B',
+      outlineColor: '#E3DCCD',
+    })
+    writerRef.current = writer
+
+    writer.getCharacterData().then((data) => {
+      totalStrokesRef.current = data.strokes.length
+      setTotalStrokesDisplay(data.strokes.length)
+    })
+
+    startQuiz(writer)
+
+    return () => {
+      writerRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
 
   useEffect(() => {
     setTimeLeft(timePerQuestion)
@@ -115,7 +136,8 @@ export function WritingScreen() {
         if (t <= 1) {
           clearInterval(timer)
           setTimedOut(true)
-          validateStroke()
+          writerRef.current?.cancelQuiz()
+          finishRound()
           return 0
         }
         return t - 1
@@ -185,56 +207,12 @@ export function WritingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoAdvanceLeft])
 
-  function getCanvasPoint(e: ReactPointerEvent<HTMLCanvasElement>) {
-    const canvas = canvasRef.current!
-    const rect = canvas.getBoundingClientRect()
-    return {
-      x: ((e.clientX - rect.left) * canvas.width) / rect.width,
-      y: ((e.clientY - rect.top) * canvas.height) / rect.height,
-    }
-  }
-
-  function startDrawing(e: ReactPointerEvent<HTMLCanvasElement>) {
-    if (validated) return
-    drawingRef.current = true
-    lastPointRef.current = getCanvasPoint(e)
-  }
-
-  function draw(e: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!drawingRef.current || validated) return
-    const canvas = canvasRef.current!
-    const ctx = canvas.getContext('2d')!
-    const point = getCanvasPoint(e)
-    const last = lastPointRef.current!
-    ctx.lineWidth = 6
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.strokeStyle = '#1B1B1B'
-    ctx.beginPath()
-    ctx.moveTo(last.x, last.y)
-    ctx.lineTo(point.x, point.y)
-    ctx.stroke()
-    lastPointRef.current = point
-    setHasDrawn(true)
-  }
-
-  function stopDrawing() {
-    drawingRef.current = false
-  }
-
-  function clearCanvas() {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    canvas.getContext('2d')!.clearRect(0, 0, canvas.width, canvas.height)
-    setHasDrawn(false)
-  }
-
-  function validateStroke() {
-    const canvas = canvasRef.current
-    const score = canvas ? computeSimilarity(canvas, current.character) : 0
-    setLastScore(score)
-    setScores((prev) => [...prev, score])
-    setValidated(true)
+  function restartCharacter() {
+    if (validated || !writerRef.current) return
+    firstTryCorrectRef.current = 0
+    setStrokeProgress(0)
+    writerRef.current.cancelQuiz()
+    startQuiz(writerRef.current)
   }
 
   function nextRound() {
@@ -242,7 +220,6 @@ export function WritingScreen() {
     setValidated(false)
     setTimedOut(false)
     setLastScore(null)
-    setHasDrawn(false)
   }
 
   function restart() {
@@ -252,7 +229,6 @@ export function WritingScreen() {
     setTimedOut(false)
     setLastScore(null)
     setScores([])
-    setHasDrawn(false)
   }
 
   function quitGame() {
@@ -263,12 +239,6 @@ export function WritingScreen() {
     }
   }
 
-  // Efface le canvas au changement de kanji.
-  useEffect(() => {
-    clearCanvas()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index])
-
   if (rounds.length === 0) return null
 
   if (finished) {
@@ -276,7 +246,7 @@ export function WritingScreen() {
       <div className={styles.page}>
         <div className={styles.endCard}>
           <div className={styles.eyebrow}>ÉCRITURE TERMINÉE</div>
-          <h1 className={styles.endTitle}>{averageScore}% de ressemblance</h1>
+          <h1 className={styles.endTitle}>{averageScore}% de traits corrects</h1>
           <p className={styles.endSubtitle}>{rounds.length} kanji tracés</p>
           <div className={styles.endActions}>
             <Button variant="primary" onClick={restart}>
@@ -356,17 +326,21 @@ export function WritingScreen() {
             <div className={styles.hintLabel}>Signification</div>
             <div className={styles.hintValueLast}>{current.meaningFr}</div>
           </div>
+
+          <div className={styles.strokeCounter}>
+            {totalStrokesDisplay !== null
+              ? `Trait ${Math.min(strokeProgress + 1, totalStrokesDisplay)} / ${totalStrokesDisplay}`
+              : 'Chargement des données de tracé...'}
+          </div>
+
           <div className={styles.actionsRow}>
-            <Button variant="outline" onClick={clearCanvas} disabled={validated}>
-              Effacer
-            </Button>
-            <Button variant="accent" onClick={validateStroke} disabled={validated || !hasDrawn}>
-              Valider le tracé
+            <Button variant="outline" onClick={restartCharacter} disabled={validated}>
+              Recommencer
             </Button>
           </div>
 
           {validated && lastScore !== null && (
-            <div className={styles.scoreNote}>{lastScore}% de ressemblance</div>
+            <div className={styles.scoreNote}>{lastScore}% de traits corrects du premier coup</div>
           )}
 
           {validated && !canAdvance && (
@@ -394,18 +368,12 @@ export function WritingScreen() {
           <div className={styles.canvasFrame}>
             <div className={styles.guideVertical} />
             <div className={styles.guideHorizontal} />
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_SIZE}
-              height={CANVAS_SIZE}
-              className={styles.canvas}
-              onPointerDown={startDrawing}
-              onPointerMove={draw}
-              onPointerUp={stopDrawing}
-              onPointerLeave={stopDrawing}
-            />
+            <div ref={targetRef} className={styles.hanziTarget} />
           </div>
-          <div className={styles.canvasHint}>Trace le kanji au doigt, à la souris, ou au stylet</div>
+          <div className={styles.canvasHint}>
+            Trace chaque trait dans l'ordre, au doigt, à la souris, ou au stylet — un trait
+            incorrect se réinitialise pour être retenté.
+          </div>
         </div>
       </div>
     </div>

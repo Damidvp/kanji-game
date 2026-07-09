@@ -249,11 +249,18 @@
   background: repeating-linear-gradient(to right, #c7bfaf 0 6px, transparent 6px 12px);
 }
 
-.canvas {
+.hanziTarget {
   position: absolute;
   inset: 0;
   cursor: crosshair;
   touch-action: none;
+}
+
+.strokeCounter {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .canvasHint {
