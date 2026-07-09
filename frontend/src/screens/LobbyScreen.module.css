@@ -26,6 +26,21 @@
   font-size: 32px;
 }
 
+.levelBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.levelBadge {
+  border: 1px solid;
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .shareRow {
   display: flex;
   gap: 10px;

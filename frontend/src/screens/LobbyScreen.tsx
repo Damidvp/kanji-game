@@ -18,6 +18,7 @@ const gameModeShortLabels: Record<GameMode, string> = {
 }
 
 const questionCountOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 10) // 10 à 100
+const timePerQuestionOptions = Array.from({ length: 9 }, (_, i) => (i + 1) * 10) // 10 à 90 secondes
 
 export function LobbyScreen() {
   const { code = 'AB3F9K' } = useParams()
@@ -25,6 +26,7 @@ export function LobbyScreen() {
   const [gameMode, setGameMode] = useState<GameMode>('quiz')
   const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(new Set(['N5', 'N4']))
   const [questionCount, setQuestionCount] = useState(20)
+  const [timePerQuestion, setTimePerQuestion] = useState(30)
   const [copied, setCopied] = useState(false)
 
   const you = players.find((p) => p.isYou)
@@ -33,8 +35,8 @@ export function LobbyScreen() {
     (_, i) => players[i] ?? null,
   )
 
-  const levelOrder: JlptLevelId[] = ['N5', 'N4', 'N3', 'N2', 'N1']
-  const selectedLevelsLabel = levelOrder.filter((id) => selectedLevels.has(id)).join(' · ')
+  // jlptLevels est déjà ordonné N5 → N1.
+  const orderedSelectedLevels = jlptLevels.filter((level) => selectedLevels.has(level.id))
 
   function toggleReady() {
     setPlayers((prev) => prev.map((p) => (p.isYou ? { ...p, ready: !p.ready } : p)))
@@ -69,9 +71,18 @@ export function LobbyScreen() {
       <div className={styles.header}>
         <div>
           <div className={styles.eyebrow}>SALON DE PARTIE</div>
-          <h1 className={styles.title}>
-            {gameModeLabels[gameMode]} — Niveaux {selectedLevelsLabel}
-          </h1>
+          <h1 className={styles.title}>{gameModeLabels[gameMode]}</h1>
+          <div className={styles.levelBadges}>
+            {orderedSelectedLevels.map((level) => (
+              <span
+                key={level.id}
+                className={styles.levelBadge}
+                style={{ borderColor: level.color, color: level.color }}
+              >
+                {level.id}
+              </span>
+            ))}
+          </div>
         </div>
         <div className={styles.shareRow}>
           <div className={styles.codeBox}>{code}</div>
@@ -165,6 +176,19 @@ export function LobbyScreen() {
               {questionCountOptions.map((n) => (
                 <option key={n} value={n}>
                   {n} questions
+                </option>
+              ))}
+            </select>
+
+            <div className={styles.settingLabel}>Temps par question</div>
+            <select
+              className={styles.select}
+              value={timePerQuestion}
+              onChange={(e) => setTimePerQuestion(Number(e.target.value))}
+            >
+              {timePerQuestionOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n} secondes
                 </option>
               ))}
             </select>
