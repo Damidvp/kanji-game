@@ -1,0 +1,43 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px 56px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.links {
+  display: flex;
+  gap: 36px;
+  font-size: 14px;
+  color: #3a3733;
+}
+
+.actions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.loginLink {
+  font-size: 14px;
+  color: #3a3733;
+}
+
+@media (max-width: 900px) {
+  .links {
+    display: none;
+  }
+
+  .nav {
+    padding: 16px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .loginLink {
+    display: none;
+  }
+}

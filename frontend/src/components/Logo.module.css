@@ -1,0 +1,18 @@
+.logo {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.kanji {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.wordmark {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}

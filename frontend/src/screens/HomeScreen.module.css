@@ -1,0 +1,144 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  padding: 64px 56px;
+  align-items: center;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 46px;
+  line-height: 1.2;
+  margin: 0 0 20px;
+}
+
+.subtitle {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #4a4644;
+  max-width: 440px;
+  margin: 0 0 30px;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.previewFrame {
+  background: var(--color-ink);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+
+.previewCard {
+  background: var(--color-paper);
+  border-radius: var(--radius-md);
+  padding: 26px;
+}
+
+.previewHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 18px;
+}
+
+.previewKanji {
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 100px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.previewReadings {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 22px;
+}
+
+.previewOptions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.previewOption {
+  border: 1px solid var(--color-border);
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.previewOptionCorrect {
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+  color: var(--color-success-border);
+  font-weight: 700;
+}
+
+.levelsLabel {
+  padding: 0 56px 20px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.levelsGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  padding: 0 56px 60px;
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+}
+
+.levelCard {
+  border-top: 4px solid;
+  background: var(--color-white);
+  padding: 20px;
+}
+
+.levelId {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.levelMeta {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 6px;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 40px 24px;
+  }
+
+  .levelsLabel,
+  .levelsGrid {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .levelsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .title {
+    font-size: 36px;
+  }
+}
