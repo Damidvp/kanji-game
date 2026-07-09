@@ -4,6 +4,7 @@ import { AuthScreen } from './screens/AuthScreen'
 import { LobbyScreen } from './screens/LobbyScreen'
 import { QuizScreen } from './screens/QuizScreen'
 import { WritingScreen } from './screens/WritingScreen'
+import { ResultsScreen } from './screens/ResultsScreen'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Route path="/lobby/:code" element={<LobbyScreen />} />
       <Route path="/lobby/:code/quiz" element={<QuizScreen />} />
       <Route path="/lobby/:code/ecriture" element={<WritingScreen />} />
+      <Route path="/lobby/:code/resultats" element={<ResultsScreen />} />
     </Routes>
   )
 }

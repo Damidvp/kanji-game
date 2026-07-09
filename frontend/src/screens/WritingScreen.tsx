@@ -10,6 +10,7 @@ import styles from './WritingScreen.module.css'
 // Les autres joueurs du salon (mock) : même simulation que le Quiz Kanji, pour prévisualiser
 // le comportement "on attend tout le monde" du futur mode multijoueur réel.
 const botPlayers = mockLobbyPlayers.filter((p) => !p.isYou)
+const you = mockLobbyPlayers.find((p) => p.isYou)!
 
 interface WritingLocationState {
   levels?: JlptLevelId[]
@@ -40,7 +41,7 @@ export function WritingScreen() {
   const questionCount = state.questionCount ?? DEFAULT_QUESTION_COUNT
   const timePerQuestion = state.timePerQuestion ?? DEFAULT_TIME_PER_QUESTION
 
-  const [rounds, setRounds] = useState(() => buildWritingRounds(levels, questionCount))
+  const [rounds] = useState(() => buildWritingRounds(levels, questionCount))
   const [index, setIndex] = useState(0)
   const [validated, setValidated] = useState(false)
   const [timedOut, setTimedOut] = useState(false)
@@ -57,6 +58,7 @@ export function WritingScreen() {
   const writerRef = useRef<HanziWriter | null>(null)
   const firstTryCorrectRef = useRef(0)
   const totalStrokesRef = useRef(0)
+  const botScoreTotalsRef = useRef<Record<string, number>>({})
 
   const current = rounds[index]
   const finished = index >= rounds.length
@@ -169,6 +171,7 @@ export function WritingScreen() {
             return
           }
           const score = Math.round(35 + Math.random() * 60)
+          botScoreTotalsRef.current[p.id] = (botScoreTotalsRef.current[p.id] || 0) + score
           setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'answered', score } }))
         }, delay)
       })
@@ -222,15 +225,6 @@ export function WritingScreen() {
     setLastScore(null)
   }
 
-  function restart() {
-    setRounds(buildWritingRounds(levels, questionCount))
-    setIndex(0)
-    setValidated(false)
-    setTimedOut(false)
-    setLastScore(null)
-    setScores([])
-  }
-
   function quitGame() {
     if (
       window.confirm("Quitter la partie ? Vous serez ramené à l'accueil et votre progression sera perdue.")
@@ -239,27 +233,43 @@ export function WritingScreen() {
     }
   }
 
-  if (rounds.length === 0) return null
+  // Une fois le dernier kanji passé, direction l'écran de résultats avec le classement complet
+  // (vous + les joueurs simulés) plutôt qu'un simple encart local.
+  useEffect(() => {
+    if (!finished) return
+    const players = [
+      {
+        id: you.id,
+        name: you.name,
+        initials: you.initials,
+        color: you.color,
+        score: averageScore,
+        scoreLabel: '%',
+        accuracy: `${averageScore}%`,
+      },
+      ...botPlayers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        initials: p.initials,
+        color: p.color,
+        score: Math.round((botScoreTotalsRef.current[p.id] || 0) / rounds.length),
+        scoreLabel: '%',
+        accuracy: `${Math.round((botScoreTotalsRef.current[p.id] || 0) / rounds.length)}%`,
+      })),
+    ]
+    navigate(`/lobby/${code}/resultats`, {
+      replace: true,
+      state: {
+        title: `ÉCRITURE DE KANJI ${levels.join(' · ')}`,
+        players,
+        replay: { path: `/lobby/${code}/ecriture`, state: { levels, questionCount, timePerQuestion } },
+      },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished])
 
-  if (finished) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.endCard}>
-          <div className={styles.eyebrow}>ÉCRITURE TERMINÉE</div>
-          <h1 className={styles.endTitle}>{averageScore}% de traits corrects</h1>
-          <p className={styles.endSubtitle}>{rounds.length} kanji tracés</p>
-          <div className={styles.endActions}>
-            <Button variant="primary" onClick={restart}>
-              Rejouer
-            </Button>
-            <Button variant="outline" onClick={() => navigate(`/lobby/${code}`)}>
-              Retour au salon
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (rounds.length === 0) return null
+  if (finished) return null
 
   const timerUrgent = timeLeft <= URGENT_THRESHOLD_SECONDS && !validated
 

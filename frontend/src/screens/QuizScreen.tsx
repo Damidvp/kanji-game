@@ -9,6 +9,7 @@ import styles from './QuizScreen.module.css'
 // Les autres joueurs du salon (mock) : simulent une réponse avec un délai aléatoire pour
 // prévisualiser le comportement "on attend tout le monde" du futur mode multijoueur réel.
 const botPlayers = mockLobbyPlayers.filter((p) => !p.isYou)
+const you = mockLobbyPlayers.find((p) => p.isYou)!
 
 interface QuizLocationState {
   levels?: JlptLevelId[]
@@ -48,7 +49,7 @@ export function QuizScreen() {
   const questionCount = state.questionCount ?? DEFAULT_QUESTION_COUNT
   const timePerQuestion = state.timePerQuestion ?? DEFAULT_TIME_PER_QUESTION
 
-  const [questions, setQuestions] = useState(() => buildQuizQuestions(levels, questionCount))
+  const [questions] = useState(() => buildQuizQuestions(levels, questionCount))
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const [timedOut, setTimedOut] = useState(false)
@@ -60,6 +61,8 @@ export function QuizScreen() {
   const [leftPlayerIds, setLeftPlayerIds] = useState<Set<string>>(new Set())
   const [autoAdvanceLeft, setAutoAdvanceLeft] = useState<number | null>(null)
   const questionStartRef = useRef(Date.now())
+  const botScoreTotalsRef = useRef<Record<string, number>>({})
+  const botCorrectCountsRef = useRef<Record<string, number>>({})
 
   const current = questions[index]
   const answered = selected !== null || timedOut
@@ -115,6 +118,8 @@ export function QuizScreen() {
           }
           const correct = Math.random() < 0.75
           const points = correct ? Math.round(200 + Math.random() * 800) : 0
+          botScoreTotalsRef.current[p.id] = (botScoreTotalsRef.current[p.id] || 0) + points
+          if (correct) botCorrectCountsRef.current[p.id] = (botCorrectCountsRef.current[p.id] || 0) + 1
           setBotAnswers((prev) => ({ ...prev, [p.id]: { status: 'answered', points } }))
         }, delay)
       })
@@ -182,38 +187,42 @@ export function QuizScreen() {
     setLastPoints(null)
   }
 
-  function restart() {
-    setQuestions(buildQuizQuestions(levels, questionCount))
-    setIndex(0)
-    setSelected(null)
-    setTimedOut(false)
-    setScore(0)
-    setCorrectCount(0)
-    setLastPoints(null)
-  }
+  // Une fois la dernière question passée, direction l'écran de résultats avec le classement
+  // complet (vous + les joueurs simulés) plutôt qu'un simple encart local.
+  useEffect(() => {
+    if (!finished) return
+    const players = [
+      {
+        id: you.id,
+        name: you.name,
+        initials: you.initials,
+        color: you.color,
+        score,
+        scoreLabel: 'pts',
+        accuracy: `${Math.round((correctCount / questions.length) * 100)}%`,
+      },
+      ...botPlayers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        initials: p.initials,
+        color: p.color,
+        score: botScoreTotalsRef.current[p.id] || 0,
+        scoreLabel: 'pts',
+        accuracy: `${Math.round(((botCorrectCountsRef.current[p.id] || 0) / questions.length) * 100)}%`,
+      })),
+    ]
+    navigate(`/lobby/${code}/resultats`, {
+      replace: true,
+      state: {
+        title: `QUIZ KANJI ${levels.join(' · ')}`,
+        players,
+        replay: { path: `/lobby/${code}/quiz`, state: { levels, questionCount, timePerQuestion } },
+      },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished])
 
-  if (finished) {
-    const percent = Math.round((correctCount / questions.length) * 100)
-    return (
-      <div className={styles.page}>
-        <div className={styles.endCard}>
-          <div className={styles.eyebrow}>QUIZ TERMINÉ</div>
-          <h1 className={styles.endTitle}>{score} points</h1>
-          <p className={styles.endSubtitle}>
-            {correctCount} / {questions.length} bonnes réponses ({percent}%)
-          </p>
-          <div className={styles.endActions}>
-            <Button variant="primary" onClick={restart}>
-              Rejouer
-            </Button>
-            <Button variant="outline" onClick={() => navigate(`/lobby/${code}`)}>
-              Retour au salon
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (finished) return null
 
   const timerUrgent = timeLeft <= URGENT_THRESHOLD_SECONDS && !answered
 
