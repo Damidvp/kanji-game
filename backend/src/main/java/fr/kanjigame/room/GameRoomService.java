@@ -155,6 +155,23 @@ public class GameRoomService {
         return broadcastAndReturn(room, request.sessionToken());
     }
 
+    public RoomStateResponse updateSettings(String code, UpdateRoomSettingsRequest request) {
+        GameRoom room = getRoomOrThrow(code);
+        GameParticipant host = requireParticipant(room, request.sessionToken());
+        if (!host.isHost()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul l'hôte peut modifier les paramètres");
+        }
+        if (room.getStatus() != RoomStatus.LOBBY) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Impossible de modifier les paramètres, la partie a déjà commencé");
+        }
+        room.setGameMode(request.gameMode());
+        room.setLevels(request.levels());
+        room.setQuestionCount(request.questionCount());
+        room.setTimePerQuestionSeconds(request.timePerQuestion());
+        gameRoomRepository.save(room);
+        return broadcastAndReturn(room, request.sessionToken());
+    }
+
     private GameParticipant requireParticipant(GameRoom room, String sessionToken) {
         return gameParticipantRepository.findByRoomIdAndSessionToken(room.getId(), sessionToken)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous ne faites pas partie de ce salon"));

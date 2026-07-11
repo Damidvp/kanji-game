@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import { TopNav } from '../components/TopNav'
 import { Button } from '../components/Button'
+import { PlayButton } from '../components/PlayButton'
 import { jlptLevels } from '../mocks/jlptLevels'
 import { mockKanjiPool } from '../mocks/kanji'
 import styles from './HomeScreen.module.css'
@@ -26,9 +26,7 @@ export function HomeScreen() {
             kanji.
           </p>
           <div className={styles.ctaRow}>
-            <Link to="/lobby/AB3F9K">
-              <Button variant="primary">Commencer à jouer</Button>
-            </Link>
+            <PlayButton variant="primary">Commencer à jouer</PlayButton>
             <a href="#niveaux">
               <Button variant="outline">Voir les niveaux</Button>
             </a>

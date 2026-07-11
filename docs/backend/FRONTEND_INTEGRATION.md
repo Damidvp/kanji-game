@@ -78,6 +78,7 @@ Le token JWT est valide 24h. Pas de refresh token, pas de logout côté serveur 
 | `POST /api/rooms/{code}/kick` | `{sessionToken (hôte), targetParticipantId}` | `RoomState` | 403 si pas hôte, 409 si pas en LOBBY. |
 | `POST /api/rooms/{code}/start` | `{sessionToken (hôte)}` | `RoomState` | 403 si pas hôte, 409 si déjà lancé. **Déclenche la 1ère manche côté WebSocket** — s'abonner aux topics WS *avant* d'appeler `/start`. |
 | `POST /api/rooms/{code}/replay` | `{sessionToken}` | `RoomState` | N'importe quel participant actif peut relancer (pas hôte-only), uniquement si `status == RESULTS`. Remet `status=LOBBY`, `ready=false` pour tous. |
+| `PATCH /api/rooms/{code}/settings` | `{sessionToken (hôte), gameMode, levels, questionCount, timePerQuestion}` (remplacement complet, pas de patch partiel) | `RoomState` | Ajouté en phase d'intégration frontend (absent du contrat initial) : permet à l'hôte de modifier les paramètres du salon depuis le Lobby, comme dans l'UI déjà validée. 403 si pas hôte, 409 si `status != LOBBY`. Diffusé sur `/topic/room/{code}` comme les autres actions. |
 
 `RoomState` :
 ```json
@@ -123,7 +124,7 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 - **Traductions FR** : `meaningFr`/`meaningsFr` = `meaningsEn` partout (pas de clé DeepL configurée). Cosmétique, n'empêche rien de fonctionner.
 - **Endpoints admin** (`GET/PUT /api/admin/kanji`) : pas construits.
 - **Pas de reconnexion WebSocket automatique testée** : le test manuel de cette phase utilisait une connexion WS stable du début à la fin d'une partie. Le comportement exact si un client perd sa connexion WS puis se reconnecte en pleine manche (est-ce qu'il reçoit l'état de la manche en cours, ou doit-il attendre la prochaine ?) n'a pas été spécifiquement testé — `GET /api/rooms/{code}` donne l'état du salon mais pas la manche en cours (pas de `GET /api/rooms/{code}/round` équivalent). À vérifier/construire si nécessaire.
-- **CORS** : configuré pour `http://localhost:5173`, `http://127.0.0.1:5173` et `https://damidvp.github.io`. Si le port Vite change ou qu'un autre environnement de test est utilisé, mettre à jour `backend/src/main/java/fr/kanjigame/config/SecurityConfig.java` (méthode `corsConfigurationSource`).
+- **CORS** : configuré pour `http://localhost:5173`, `http://127.0.0.1:5173` et `https://damidvp.github.io`, méthodes `GET/POST/PUT/PATCH/DELETE/OPTIONS`. Si le port Vite change ou qu'un autre environnement de test est utilisé, mettre à jour `backend/src/main/java/fr/kanjigame/config/SecurityConfig.java` (méthode `corsConfigurationSource`).
 - **Sécurité JWT** : secret de développement en dur dans `application.yml` (`jwt.secret`, override via variable d'env `JWT_SECRET`) — non bloquant pour du dev local, à changer avant tout déploiement partagé.
 
 ## 6. Correspondance mocks → API réelle, fichier par fichier
@@ -131,11 +132,16 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 | Fichier mock | Remplacer par | Écran(s) concerné(s) |
 |---|---|---|
 | `frontend/src/mocks/kanji.ts` (`mockKanjiPool`, `buildQuizQuestions`, `buildWritingRounds`) | `GET /api/kanji?levels=...` pour le pool ; `buildQuizQuestions`/`buildWritingRounds` deviennent inutiles côté client — c'est le serveur qui choisit le kanji et génère les options à chaque manche, diffusé sur `/topic/room/{code}/round` | `QuizScreen.tsx`, `WritingScreen.tsx` |
-| `frontend/src/mocks/lobby.ts` (`mockLobbyPlayers`, `MOCK_LOBBY_CODE`) | `POST /api/rooms`, `GET /api/rooms/{code}`, `/topic/room/{code}` | `LobbyScreen.tsx` |
+| `frontend/src/mocks/lobby.ts` (`mockLobbyPlayers`, `MOCK_LOBBY_CODE`) | `POST /api/rooms`, `GET/POST /api/rooms/{code}/join`, `PATCH /api/rooms/{code}/settings`, `/topic/room/{code}` — **fait**, voir `frontend/src/lib/rooms.ts` + `frontend/src/hooks/useRoomSocket.ts` | `LobbyScreen.tsx` |
 | `frontend/src/mocks/profile.ts` | `GET /api/profile/me` — **incomplet, voir gap §5** | `ProfileScreen.tsx` |
 | `frontend/src/mocks/jlptLevels.ts` | Probablement à garder tel quel (juste la liste statique N5..N1 + libellés/couleurs, pas de contrepartie serveur nécessaire) | Plusieurs écrans |
 
 Les bots simulés (délais aléatoires, départs aléatoires) dans `QuizScreen.tsx`/`WritingScreen.tsx` sont entièrement à supprimer — c'est exactement ce que le vrai WebSocket remplace.
+
+**Écarts constatés par rapport à ce document pendant l'implémentation (2026-07-12)**, arbitrés avec Damien :
+- Aucune UI ne collectait de nom pour les invités (le mock utilisait un nom fixe). Ajout minimal : `components/GuestNameModal.tsx`, déclenché une seule fois par `components/PlayButton.tsx` (bouton "Jouer maintenant"/"Commencer à jouer" partagé Accueil+TopNav) puis mémorisé en `localStorage` (`kanji-game:guestName`).
+- Le contrat d'origine n'avait pas d'endpoint pour modifier les paramètres du salon après création, alors que le Lobby déjà validé le permet à l'hôte. Ajouté : `PATCH /api/rooms/{code}/settings` (voir §3), hôte uniquement, uniquement en `LOBBY`.
+- `sockjs-client` suppose l'objet `global` de Node — nécessite `define: { global: 'globalThis' }` dans `frontend/vite.config.ts` (déjà fait), sinon erreur `ReferenceError: global is not defined` au premier import.
 
 ## 7. Ordre d'implémentation suggéré
 

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from './Logo'
-import { Button } from './Button'
+import { PlayButton } from './PlayButton'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './TopNav.module.css'
 
@@ -38,9 +38,7 @@ export function TopNav() {
             Connexion
           </Link>
         )}
-        <Link to="/lobby/AB3F9K">
-          <Button variant="accent">Jouer maintenant</Button>
-        </Link>
+        <PlayButton variant="accent">Jouer maintenant</PlayButton>
       </div>
     </nav>
   )

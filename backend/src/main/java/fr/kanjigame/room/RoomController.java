@@ -5,6 +5,7 @@ import fr.kanjigame.user.AppUser;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,6 +53,11 @@ public class RoomController {
     @PostMapping("/{code}/kick")
     public RoomStateResponse kick(@PathVariable String code, @Valid @RequestBody KickRequest request) {
         return gameRoomService.kick(code, request.sessionToken(), request.targetParticipantId());
+    }
+
+    @PatchMapping("/{code}/settings")
+    public RoomStateResponse updateSettings(@PathVariable String code, @Valid @RequestBody UpdateRoomSettingsRequest request) {
+        return gameRoomService.updateSettings(code, request);
     }
 
     @PostMapping("/{code}/start")

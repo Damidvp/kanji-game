@@ -1,127 +1,117 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
+import { GuestNameModal } from '../components/GuestNameModal'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
-import { mockLobbyPlayers, LOBBY_MAX_PLAYERS, type LobbyPlayer } from '../mocks/lobby'
-import { getObjectiveLevel } from '../lib/profile'
+import { useAuth } from '../contexts/AuthContext'
+import { getSessionToken } from '../lib/session'
+import { getGuestName, setGuestName } from '../lib/guest'
+import {
+  joinRoom,
+  setReady,
+  kickParticipant,
+  startGame,
+  updateRoomSettings,
+  type RoomState,
+  type GameMode,
+} from '../lib/rooms'
+import { useRoomSocket } from '../hooks/useRoomSocket'
 import styles from './LobbyScreen.module.css'
 
-function withYourObjective(list: LobbyPlayer[]): LobbyPlayer[] {
-  const yourObjective = getObjectiveLevel()
-  return list.map((p) => (p.isYou ? { ...p, objectiveLevel: yourObjective } : p))
-}
-
-type GameMode = 'quiz' | 'ecriture'
-
 const gameModeLabels: Record<GameMode, string> = {
-  quiz: 'Quiz Kanji',
-  ecriture: 'Écriture de kanji',
+  QUIZ: 'Quiz Kanji',
+  ECRITURE: 'Écriture de kanji',
 }
 
 const gameModeShortLabels: Record<GameMode, string> = {
-  quiz: 'Quiz Kanji',
-  ecriture: 'Écriture',
+  QUIZ: 'Quiz Kanji',
+  ECRITURE: 'Écriture',
 }
 
 const questionCountOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 10) // 10 à 100
 const timePerQuestionOptions = Array.from({ length: 9 }, (_, i) => (i + 1) * 10) // 10 à 90 secondes
-
-interface LobbyLocationState {
-  gameMode?: GameMode
-  levels?: JlptLevelId[]
-  questionCount?: number
-  timePerQuestion?: number
-  fromResults?: boolean
-}
+const LOBBY_MAX_PLAYERS = 8
 
 export function LobbyScreen() {
-  const { code = 'AB3F9K' } = useParams()
+  const { code } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
-  const locState = (location.state as LobbyLocationState) ?? {}
+  const { profile, loading: authLoading } = useAuth()
 
-  const [players, setPlayers] = useState<LobbyPlayer[]>(() =>
-    withYourObjective(
-      locState.fromResults ? mockLobbyPlayers.map((p) => ({ ...p, ready: false })) : mockLobbyPlayers,
-    ),
-  )
-  const [gameMode, setGameMode] = useState<GameMode>(locState.gameMode ?? 'quiz')
-  const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(
-    new Set(locState.levels?.length ? locState.levels : ['N5', 'N4']),
-  )
-  const [questionCount, setQuestionCount] = useState(locState.questionCount ?? 20)
-  const [timePerQuestion, setTimePerQuestion] = useState(locState.timePerQuestion ?? 30)
+  const [roomState, setRoomState] = useState<RoomState | null>(null)
+  const [myParticipantId, setMyParticipantId] = useState<number | null>(null)
+  const [needsGuestName, setNeedsGuestName] = useState(false)
+  const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  // Au retour d'une partie, les autres joueurs ne reviennent pas tous au salon en même temps :
-  // certains consultent encore l'écran de résultats. On simule un délai aléatoire par joueur
-  // avant qu'il ne soit vraiment "dans le salon" et redevienne disponible.
-  const [viewingResultsIds, setViewingResultsIds] = useState<Set<string>>(
-    () => new Set(locState.fromResults ? mockLobbyPlayers.filter((p) => !p.isYou).map((p) => p.id) : []),
-  )
-
-  useEffect(() => {
-    if (viewingResultsIds.size === 0) return
-    const timeouts = [...viewingResultsIds].map((id) => {
-      const delay = 2000 + Math.random() * 7000
-      return setTimeout(() => {
-        setViewingResultsIds((prev) => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
-      }, delay)
-    })
-    return () => timeouts.forEach(clearTimeout)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const applyState = useCallback((state: RoomState) => {
+    setRoomState(state)
+    const mine = state.participants.find((p) => p.isYou)
+    if (mine) setMyParticipantId(mine.id)
   }, [])
 
-  const you = players.find((p) => p.isYou)
-  const filledSlots: (LobbyPlayer | null)[] = Array.from(
+  useEffect(() => {
+    if (!code || authLoading) return
+    const sessionToken = getSessionToken()
+    const guestName = profile ? undefined : (getGuestName() ?? undefined)
+    if (!profile && !guestName) {
+      setNeedsGuestName(true)
+      return
+    }
+    let cancelled = false
+    joinRoom(code, sessionToken, guestName)
+      .then((state) => {
+        if (!cancelled) applyState(state)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Ce salon est introuvable ou la partie a déjà commencé.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [code, profile, authLoading, applyState])
+
+  const { connected, sendEnterLobby } = useRoomSocket(code ?? '', { onRoomState: applyState })
+
+  useEffect(() => {
+    if (connected) sendEnterLobby(getSessionToken())
+  }, [connected, sendEnterLobby])
+
+  useEffect(() => {
+    if (roomState?.status === 'IN_PROGRESS' && code) {
+      navigate(roomState.gameMode === 'QUIZ' ? `/lobby/${code}/quiz` : `/lobby/${code}/ecriture`)
+    }
+  }, [roomState?.status, roomState?.gameMode, code, navigate])
+
+  function handleGuestNameSubmit(name: string) {
+    setGuestName(name)
+    setNeedsGuestName(false)
+  }
+
+  const you = roomState?.participants.find((p) => p.id === myParticipantId) ?? null
+  const activeParticipants =
+    roomState?.participants.filter((p) => p.status !== 'LEFT' && p.status !== 'KICKED') ?? []
+  const orderedSelectedLevels = roomState ? jlptLevels.filter((level) => roomState.levels.includes(level.id)) : []
+  const filledSlots: (typeof activeParticipants[number] | null)[] = Array.from(
     { length: LOBBY_MAX_PLAYERS },
-    (_, i) => players[i] ?? null,
+    (_, i) => activeParticipants[i] ?? null,
   )
 
-  // jlptLevels est déjà ordonné N5 → N1.
-  const orderedSelectedLevels = jlptLevels.filter((level) => selectedLevels.has(level.id))
-
   function toggleReady() {
-    setPlayers((prev) => prev.map((p) => (p.isYou ? { ...p, ready: !p.ready } : p)))
+    if (!code || !you) return
+    setReady(code, getSessionToken(), !you.ready).then(applyState).catch(() => {})
   }
 
-  function toggleLevel(id: JlptLevelId) {
-    setSelectedLevels((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        if (next.size === 1) return prev // au moins un niveau doit rester sélectionné
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
-  function kickPlayer(player: LobbyPlayer) {
+  function kickPlayer(player: { id: number; name: string }) {
+    if (!code) return
     if (!window.confirm(`Exclure ${player.name} du salon ?`)) return
-    setPlayers((prev) => prev.filter((p) => p.id !== player.id))
-    setViewingResultsIds((prev) => {
-      if (!prev.has(player.id)) return prev
-      const next = new Set(prev)
-      next.delete(player.id)
-      return next
-    })
+    kickParticipant(code, getSessionToken(), player.id).then(applyState).catch(() => {})
   }
 
   function launchGame() {
-    const path = gameMode === 'quiz' ? `/lobby/${code}/quiz` : `/lobby/${code}/ecriture`
-    navigate(path, {
-      state: {
-        levels: orderedSelectedLevels.map((l) => l.id),
-        questionCount,
-        timePerQuestion,
-      },
-    })
+    if (!code) return
+    startGame(code, getSessionToken())
+      .then(applyState)
+      .catch(() => setError('Impossible de lancer la partie.'))
   }
 
   async function copyLink() {
@@ -135,12 +125,60 @@ export function LobbyScreen() {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  function changeSettings(partial: {
+    gameMode?: GameMode
+    levels?: JlptLevelId[]
+    questionCount?: number
+    timePerQuestion?: number
+  }) {
+    if (!code || !roomState || !you?.isHost) return
+    updateRoomSettings(code, {
+      gameMode: partial.gameMode ?? roomState.gameMode,
+      levels: partial.levels ?? roomState.levels,
+      questionCount: partial.questionCount ?? roomState.questionCount,
+      timePerQuestion: partial.timePerQuestion ?? roomState.timePerQuestionSeconds,
+      sessionToken: getSessionToken(),
+    })
+      .then(applyState)
+      .catch(() => {})
+  }
+
+  function toggleLevel(id: JlptLevelId) {
+    if (!roomState) return
+    const current = roomState.levels
+    if (current.includes(id)) {
+      if (current.length === 1) return // au moins un niveau doit rester sélectionné
+      changeSettings({ levels: current.filter((l) => l !== id) })
+    } else {
+      changeSettings({ levels: [...current, id] })
+    }
+  }
+
+  if (needsGuestName) {
+    return <GuestNameModal onSubmit={handleGuestNameSubmit} onCancel={() => navigate('/')} />
+  }
+
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <p>{error}</p>
+        <Button variant="primary" onClick={() => navigate('/')}>
+          Retour à l'accueil
+        </Button>
+      </div>
+    )
+  }
+
+  if (!roomState || !code) {
+    return <div className={styles.page}>Connexion au salon…</div>
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
           <div className={styles.eyebrow}>SALON DE PARTIE</div>
-          <h1 className={styles.title}>{gameModeLabels[gameMode]}</h1>
+          <h1 className={styles.title}>{gameModeLabels[roomState.gameMode]}</h1>
           <div className={styles.levelBadges}>
             {orderedSelectedLevels.map((level) => (
               <span
@@ -164,7 +202,7 @@ export function LobbyScreen() {
       <div className={styles.grid}>
         <div>
           <div className={styles.sectionLabel}>
-            JOUEURS ({players.length}/{LOBBY_MAX_PLAYERS})
+            JOUEURS ({activeParticipants.length}/{LOBBY_MAX_PLAYERS})
           </div>
           <div className={styles.playersGrid}>
             {filledSlots.map((player, i) => {
@@ -176,12 +214,11 @@ export function LobbyScreen() {
                   </div>
                 )
               }
-              const isViewingResults = viewingResultsIds.has(player.id)
-              const canKick = you?.isHost && !player.isYou
+              const canKick = you?.isHost && player.id !== you.id
               const objectiveLevelInfo = jlptLevels.find((l) => l.id === player.objectiveLevel)
               let statusClass = styles.statusWaiting
               let statusText = 'En attente...'
-              if (isViewingResults) {
+              if (player.status === 'VIEWING_RESULTS') {
                 statusClass = styles.statusViewing
                 statusText = 'Consulte les résultats...'
               } else if (player.ready) {
@@ -238,8 +275,9 @@ export function LobbyScreen() {
                 <button
                   key={mode}
                   type="button"
-                  className={mode === gameMode ? styles.gameOptionActive : styles.gameOption}
-                  onClick={() => setGameMode(mode)}
+                  disabled={!you?.isHost}
+                  className={mode === roomState.gameMode ? styles.gameOptionActive : styles.gameOption}
+                  onClick={() => changeSettings({ gameMode: mode })}
                 >
                   {gameModeShortLabels[mode]}
                 </button>
@@ -249,11 +287,12 @@ export function LobbyScreen() {
             <div className={styles.settingLabel}>Niveaux JLPT</div>
             <div className={styles.chipsRow}>
               {jlptLevels.map((level) => {
-                const selected = selectedLevels.has(level.id)
+                const selected = roomState.levels.includes(level.id)
                 return (
                   <button
                     key={level.id}
                     type="button"
+                    disabled={!you?.isHost}
                     className={styles.chip}
                     style={{
                       borderColor: level.color,
@@ -271,8 +310,9 @@ export function LobbyScreen() {
             <div className={styles.settingLabel}>Nombre de questions</div>
             <select
               className={styles.select}
-              value={questionCount}
-              onChange={(e) => setQuestionCount(Number(e.target.value))}
+              disabled={!you?.isHost}
+              value={roomState.questionCount}
+              onChange={(e) => changeSettings({ questionCount: Number(e.target.value) })}
             >
               {questionCountOptions.map((n) => (
                 <option key={n} value={n}>
@@ -284,8 +324,9 @@ export function LobbyScreen() {
             <div className={styles.settingLabel}>Temps par question</div>
             <select
               className={styles.select}
-              value={timePerQuestion}
-              onChange={(e) => setTimePerQuestion(Number(e.target.value))}
+              disabled={!you?.isHost}
+              value={roomState.timePerQuestionSeconds}
+              onChange={(e) => changeSettings({ timePerQuestion: Number(e.target.value) })}
             >
               {timePerQuestionOptions.map((n) => (
                 <option key={n} value={n}>
@@ -295,9 +336,11 @@ export function LobbyScreen() {
             </select>
           </div>
 
-          <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
-            Lancer la partie
-          </Button>
+          {you?.isHost && (
+            <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
+              Lancer la partie
+            </Button>
+          )}
         </div>
       </div>
     </div>

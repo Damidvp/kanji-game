@@ -120,12 +120,24 @@ public class GameRoom {
         return gameMode;
     }
 
+    public void setGameMode(GameMode gameMode) {
+        this.gameMode = gameMode;
+    }
+
     public int getQuestionCount() {
         return questionCount;
     }
 
+    public void setQuestionCount(int questionCount) {
+        this.questionCount = questionCount;
+    }
+
     public int getTimePerQuestionSeconds() {
         return timePerQuestionSeconds;
+    }
+
+    public void setTimePerQuestionSeconds(int timePerQuestionSeconds) {
+        this.timePerQuestionSeconds = timePerQuestionSeconds;
     }
 
     public RoomStatus getStatus() {
@@ -146,5 +158,9 @@ public class GameRoom {
 
     public Set<JlptLevel> getLevels() {
         return levels;
+    }
+
+    public void setLevels(Set<JlptLevel> levels) {
+        this.levels = levels;
     }
 }
