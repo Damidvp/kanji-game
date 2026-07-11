@@ -14,6 +14,9 @@ export function TopNav() {
         <span>Classements</span>
       </div>
       <div className={styles.actions}>
+        <Link to="/profil" className={styles.loginLink}>
+          Profil
+        </Link>
         <Link to="/connexion" className={styles.loginLink}>
           Connexion
         </Link>

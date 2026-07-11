@@ -3,7 +3,13 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { mockLobbyPlayers, LOBBY_MAX_PLAYERS, type LobbyPlayer } from '../mocks/lobby'
+import { getObjectiveLevel } from '../lib/profile'
 import styles from './LobbyScreen.module.css'
+
+function withYourObjective(list: LobbyPlayer[]): LobbyPlayer[] {
+  const yourObjective = getObjectiveLevel()
+  return list.map((p) => (p.isYou ? { ...p, objectiveLevel: yourObjective } : p))
+}
 
 type GameMode = 'quiz' | 'ecriture'
 
@@ -35,7 +41,9 @@ export function LobbyScreen() {
   const locState = (location.state as LobbyLocationState) ?? {}
 
   const [players, setPlayers] = useState<LobbyPlayer[]>(() =>
-    locState.fromResults ? mockLobbyPlayers.map((p) => ({ ...p, ready: false })) : mockLobbyPlayers,
+    withYourObjective(
+      locState.fromResults ? mockLobbyPlayers.map((p) => ({ ...p, ready: false })) : mockLobbyPlayers,
+    ),
   )
   const [gameMode, setGameMode] = useState<GameMode>(locState.gameMode ?? 'quiz')
   const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(
@@ -170,6 +178,7 @@ export function LobbyScreen() {
               }
               const isViewingResults = viewingResultsIds.has(player.id)
               const canKick = you?.isHost && !player.isYou
+              const objectiveLevelInfo = jlptLevels.find((l) => l.id === player.objectiveLevel)
               let statusClass = styles.statusWaiting
               let statusText = 'En attente...'
               if (isViewingResults) {
@@ -195,6 +204,15 @@ export function LobbyScreen() {
                     {player.initials}
                   </div>
                   <div className={styles.playerName}>{player.name}</div>
+                  {objectiveLevelInfo && (
+                    <div
+                      className={styles.objectiveBadge}
+                      style={{ borderColor: objectiveLevelInfo.color, color: objectiveLevelInfo.color }}
+                      title={`Objectif ${objectiveLevelInfo.id}`}
+                    >
+                      Objectif {objectiveLevelInfo.id}
+                    </div>
+                  )}
                   <div className={statusClass}>{statusText}</div>
                   {player.isHost && <div className={styles.hostBadge}>HÔTE</div>}
                 </div>

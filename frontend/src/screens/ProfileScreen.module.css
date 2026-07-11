@@ -1,0 +1,151 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 50px 60px 80px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 44px;
+}
+
+.avatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.name {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.memberSince {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.objectiveRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.objectiveLabel {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.chipsRow {
+  display: flex;
+  gap: 6px;
+}
+
+.chip {
+  border: 1px solid;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 44px;
+  max-width: 480px;
+}
+
+.statCard {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  padding: 22px;
+}
+
+.statValue {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin-top: 6px;
+}
+
+.sectionLabel {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  margin-bottom: 16px;
+}
+
+.levelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 560px;
+}
+
+.levelRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.levelId {
+  width: 36px;
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
+.levelBarTrack {
+  flex: 1;
+  height: 10px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.levelBarFill {
+  height: 100%;
+}
+
+.levelPercent {
+  width: 44px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 30px 24px 60px;
+  }
+
+  .header {
+    align-items: flex-start;
+  }
+
+  .statsRow {
+    grid-template-columns: 1fr 1fr;
+    max-width: none;
+  }
+}

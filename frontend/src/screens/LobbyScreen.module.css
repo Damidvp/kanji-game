@@ -119,6 +119,16 @@
   font-weight: 700;
 }
 
+.objectiveBadge {
+  display: inline-block;
+  border: 1px solid;
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
 .statusReady {
   font-size: 12px;
   color: var(--color-success-border);

@@ -5,12 +5,14 @@ import { LobbyScreen } from './screens/LobbyScreen'
 import { QuizScreen } from './screens/QuizScreen'
 import { WritingScreen } from './screens/WritingScreen'
 import { ResultsScreen } from './screens/ResultsScreen'
+import { ProfileScreen } from './screens/ProfileScreen'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomeScreen />} />
       <Route path="/connexion" element={<AuthScreen />} />
+      <Route path="/profil" element={<ProfileScreen />} />
       <Route path="/lobby/:code" element={<LobbyScreen />} />
       <Route path="/lobby/:code/quiz" element={<QuizScreen />} />
       <Route path="/lobby/:code/ecriture" element={<WritingScreen />} />
