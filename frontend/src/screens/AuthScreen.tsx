@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { Button } from '../components/Button'
+import { isAuthError } from '../lib/auth'
+import { useAuth } from '../contexts/AuthContext'
 import styles from './AuthScreen.module.css'
 
 type AuthTab = 'login' | 'signup'
@@ -10,6 +12,7 @@ interface FormErrors {
   pseudo?: string
   email?: string
   password?: string
+  form?: string
 }
 
 function isValidEmail(value: string) {
@@ -18,39 +21,64 @@ function isValidEmail(value: string) {
 
 export function AuthScreen() {
   const navigate = useNavigate()
+  const { login, signup } = useAuth()
   const [activeTab, setActiveTab] = useState<AuthTab>('login')
 
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginErrors, setLoginErrors] = useState<FormErrors>({})
+  const [loginPending, setLoginPending] = useState(false)
 
   const [signupPseudo, setSignupPseudo] = useState('')
   const [signupEmail, setSignupEmail] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupErrors, setSignupErrors] = useState<FormErrors>({})
+  const [signupPending, setSignupPending] = useState(false)
 
-  function handleLogin(event: FormEvent) {
+  async function handleLogin(event: FormEvent) {
     event.preventDefault()
     const errors: FormErrors = {}
     if (!isValidEmail(loginEmail)) errors.email = 'Adresse e-mail invalide.'
     if (!loginPassword) errors.password = 'Mot de passe requis.'
     setLoginErrors(errors)
-    if (Object.keys(errors).length === 0) {
-      // Pas de backend branché pour l'instant : on simule une connexion réussie.
+    if (Object.keys(errors).length > 0) return
+
+    setLoginPending(true)
+    try {
+      await login(loginEmail, loginPassword)
       navigate('/')
+    } catch (error) {
+      if (isAuthError(error, 401)) {
+        setLoginErrors({ form: 'E-mail ou mot de passe incorrect.' })
+      } else {
+        setLoginErrors({ form: 'Connexion impossible. Réessaie dans un instant.' })
+      }
+    } finally {
+      setLoginPending(false)
     }
   }
 
-  function handleSignup(event: FormEvent) {
+  async function handleSignup(event: FormEvent) {
     event.preventDefault()
     const errors: FormErrors = {}
     if (signupPseudo.trim().length < 3) errors.pseudo = 'Au moins 3 caractères.'
     if (!isValidEmail(signupEmail)) errors.email = 'Adresse e-mail invalide.'
     if (signupPassword.length < 6) errors.password = 'Au moins 6 caractères.'
     setSignupErrors(errors)
-    if (Object.keys(errors).length === 0) {
-      // Pas de backend branché pour l'instant : on simule une création de compte réussie.
+    if (Object.keys(errors).length > 0) return
+
+    setSignupPending(true)
+    try {
+      await signup(signupPseudo.trim(), signupEmail, signupPassword)
       navigate('/')
+    } catch (error) {
+      if (isAuthError(error, 409)) {
+        setSignupErrors({ form: 'Ce pseudo ou cet e-mail est déjà utilisé.' })
+      } else {
+        setSignupErrors({ form: 'Inscription impossible. Réessaie dans un instant.' })
+      }
+    } finally {
+      setSignupPending(false)
     }
   }
 
@@ -120,13 +148,14 @@ export function AuthScreen() {
               onChange={(e) => setLoginPassword(e.target.value)}
             />
             {loginErrors.password && <div className={styles.error}>{loginErrors.password}</div>}
+            {loginErrors.form && <div className={styles.error}>{loginErrors.form}</div>}
 
             <div className={styles.forgotPassword} title="Fonctionnalité bientôt disponible">
               Mot de passe oublié ?
             </div>
 
-            <Button type="submit" variant="primary" className={styles.submitButton}>
-              Se connecter
+            <Button type="submit" variant="primary" className={styles.submitButton} disabled={loginPending}>
+              {loginPending ? 'Connexion…' : 'Se connecter'}
             </Button>
 
             <div className={styles.divider}>ou</div>
@@ -175,9 +204,10 @@ export function AuthScreen() {
               onChange={(e) => setSignupPassword(e.target.value)}
             />
             {signupErrors.password && <div className={styles.error}>{signupErrors.password}</div>}
+            {signupErrors.form && <div className={styles.error}>{signupErrors.form}</div>}
 
-            <Button type="submit" variant="primary" className={styles.submitButton}>
-              Créer mon compte
+            <Button type="submit" variant="primary" className={styles.submitButton} disabled={signupPending}>
+              {signupPending ? 'Création…' : 'Créer mon compte'}
             </Button>
           </form>
         )}

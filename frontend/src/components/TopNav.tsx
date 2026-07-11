@@ -1,9 +1,18 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from './Logo'
 import { Button } from './Button'
+import { useAuth } from '../contexts/AuthContext'
 import styles from './TopNav.module.css'
 
 export function TopNav() {
+  const navigate = useNavigate()
+  const { profile, logout } = useAuth()
+
+  function handleLogout() {
+    logout()
+    navigate('/')
+  }
+
   return (
     <nav className={styles.nav}>
       <Logo />
@@ -17,9 +26,18 @@ export function TopNav() {
         <Link to="/profil" className={styles.loginLink}>
           Profil
         </Link>
-        <Link to="/connexion" className={styles.loginLink}>
-          Connexion
-        </Link>
+        {profile ? (
+          <>
+            <span className={styles.loginLink}>{profile.pseudo}</span>
+            <button type="button" className={styles.loginLink} onClick={handleLogout}>
+              Déconnexion
+            </button>
+          </>
+        ) : (
+          <Link to="/connexion" className={styles.loginLink}>
+            Connexion
+          </Link>
+        )}
         <Link to="/lobby/AB3F9K">
           <Button variant="accent">Jouer maintenant</Button>
         </Link>
