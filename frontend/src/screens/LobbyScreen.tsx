@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { mockLobbyPlayers, LOBBY_MAX_PLAYERS, type LobbyPlayer } from '../mocks/lobby'
@@ -20,15 +20,53 @@ const gameModeShortLabels: Record<GameMode, string> = {
 const questionCountOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 10) // 10 à 100
 const timePerQuestionOptions = Array.from({ length: 9 }, (_, i) => (i + 1) * 10) // 10 à 90 secondes
 
+interface LobbyLocationState {
+  gameMode?: GameMode
+  levels?: JlptLevelId[]
+  questionCount?: number
+  timePerQuestion?: number
+  fromResults?: boolean
+}
+
 export function LobbyScreen() {
   const { code = 'AB3F9K' } = useParams()
   const navigate = useNavigate()
-  const [players, setPlayers] = useState<LobbyPlayer[]>(mockLobbyPlayers)
-  const [gameMode, setGameMode] = useState<GameMode>('quiz')
-  const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(new Set(['N5', 'N4']))
-  const [questionCount, setQuestionCount] = useState(20)
-  const [timePerQuestion, setTimePerQuestion] = useState(30)
+  const location = useLocation()
+  const locState = (location.state as LobbyLocationState) ?? {}
+
+  const [players, setPlayers] = useState<LobbyPlayer[]>(() =>
+    locState.fromResults ? mockLobbyPlayers.map((p) => ({ ...p, ready: false })) : mockLobbyPlayers,
+  )
+  const [gameMode, setGameMode] = useState<GameMode>(locState.gameMode ?? 'quiz')
+  const [selectedLevels, setSelectedLevels] = useState<Set<JlptLevelId>>(
+    new Set(locState.levels?.length ? locState.levels : ['N5', 'N4']),
+  )
+  const [questionCount, setQuestionCount] = useState(locState.questionCount ?? 20)
+  const [timePerQuestion, setTimePerQuestion] = useState(locState.timePerQuestion ?? 30)
   const [copied, setCopied] = useState(false)
+
+  // Au retour d'une partie, les autres joueurs ne reviennent pas tous au salon en même temps :
+  // certains consultent encore l'écran de résultats. On simule un délai aléatoire par joueur
+  // avant qu'il ne soit vraiment "dans le salon" et redevienne disponible.
+  const [viewingResultsIds, setViewingResultsIds] = useState<Set<string>>(
+    () => new Set(locState.fromResults ? mockLobbyPlayers.filter((p) => !p.isYou).map((p) => p.id) : []),
+  )
+
+  useEffect(() => {
+    if (viewingResultsIds.size === 0) return
+    const timeouts = [...viewingResultsIds].map((id) => {
+      const delay = 2000 + Math.random() * 7000
+      return setTimeout(() => {
+        setViewingResultsIds((prev) => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      }, delay)
+    })
+    return () => timeouts.forEach(clearTimeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const you = players.find((p) => p.isYou)
   const filledSlots: (LobbyPlayer | null)[] = Array.from(
@@ -52,6 +90,17 @@ export function LobbyScreen() {
       } else {
         next.add(id)
       }
+      return next
+    })
+  }
+
+  function kickPlayer(player: LobbyPlayer) {
+    if (!window.confirm(`Exclure ${player.name} du salon ?`)) return
+    setPlayers((prev) => prev.filter((p) => p.id !== player.id))
+    setViewingResultsIds((prev) => {
+      if (!prev.has(player.id)) return prev
+      const next = new Set(prev)
+      next.delete(player.id)
       return next
     })
   }
@@ -110,25 +159,47 @@ export function LobbyScreen() {
             JOUEURS ({players.length}/{LOBBY_MAX_PLAYERS})
           </div>
           <div className={styles.playersGrid}>
-            {filledSlots.map((player, i) =>
-              player ? (
+            {filledSlots.map((player, i) => {
+              if (!player) {
+                return (
+                  <div key={`empty-${i}`} className={styles.slotEmpty}>
+                    <div className={styles.avatarEmpty} />
+                    <div className={styles.emptyLabel}>En attente...</div>
+                  </div>
+                )
+              }
+              const isViewingResults = viewingResultsIds.has(player.id)
+              const canKick = you?.isHost && !player.isYou
+              let statusClass = styles.statusWaiting
+              let statusText = 'En attente...'
+              if (isViewingResults) {
+                statusClass = styles.statusViewing
+                statusText = 'Consulte les résultats...'
+              } else if (player.ready) {
+                statusClass = styles.statusReady
+                statusText = 'Prêt'
+              }
+              return (
                 <div key={player.id} className={styles.slotFilled}>
+                  {canKick && (
+                    <button
+                      type="button"
+                      className={styles.kickButton}
+                      onClick={() => kickPlayer(player)}
+                      title={`Exclure ${player.name}`}
+                    >
+                      ✕
+                    </button>
+                  )}
                   <div className={styles.avatar} style={{ background: player.color }}>
                     {player.initials}
                   </div>
                   <div className={styles.playerName}>{player.name}</div>
-                  <div className={player.ready ? styles.statusReady : styles.statusWaiting}>
-                    {player.ready ? 'Prêt' : 'En attente...'}
-                  </div>
+                  <div className={statusClass}>{statusText}</div>
                   {player.isHost && <div className={styles.hostBadge}>HÔTE</div>}
                 </div>
-              ) : (
-                <div key={`empty-${i}`} className={styles.slotEmpty}>
-                  <div className={styles.avatarEmpty} />
-                  <div className={styles.emptyLabel}>En attente...</div>
-                </div>
-              ),
-            )}
+              )
+            })}
           </div>
 
           {you && (

@@ -262,7 +262,10 @@ export function WritingScreen() {
       state: {
         title: `ÉCRITURE DE KANJI ${levels.join(' · ')}`,
         players,
-        replay: { path: `/lobby/${code}/ecriture`, state: { levels, questionCount, timePerQuestion } },
+        gameMode: 'ecriture',
+        levels,
+        questionCount,
+        timePerQuestion,
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

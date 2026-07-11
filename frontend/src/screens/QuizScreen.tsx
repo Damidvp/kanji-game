@@ -216,7 +216,10 @@ export function QuizScreen() {
       state: {
         title: `QUIZ KANJI ${levels.join(' · ')}`,
         players,
-        replay: { path: `/lobby/${code}/quiz`, state: { levels, questionCount, timePerQuestion } },
+        gameMode: 'quiz',
+        levels,
+        questionCount,
+        timePerQuestion,
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,5 +1,7 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
+import type { JlptLevelId } from '../mocks/jlptLevels'
 import styles from './ResultsScreen.module.css'
 
 export interface ResultsPlayer {
@@ -15,7 +17,10 @@ export interface ResultsPlayer {
 export interface ResultsLocationState {
   title: string
   players: ResultsPlayer[]
-  replay?: { path: string; state?: unknown }
+  gameMode?: 'quiz' | 'ecriture'
+  levels?: JlptLevelId[]
+  questionCount?: number
+  timePerQuestion?: number
 }
 
 const FALLBACK_STATE: ResultsLocationState = {
@@ -38,22 +43,48 @@ const PODIUM_BOX_SIZE = [
 ]
 // Ordre visuel du podium : 2e à gauche, 1er au centre, 3e à droite.
 const PODIUM_VISUAL_ORDER = [1, 0, 2]
+const AUTO_RETURN_SECONDS = 60
 
 export function ResultsScreen() {
   const navigate = useNavigate()
   const location = useLocation()
   const state = (location.state as ResultsLocationState) ?? FALLBACK_STATE
+  const { code = 'AB3F9K' } = useParams()
+
+  const [autoReturnLeft, setAutoReturnLeft] = useState(AUTO_RETURN_SECONDS)
 
   const ranked = [...state.players].sort((a, b) => b.score - a.score)
   const podium = ranked.slice(0, 3)
 
-  function replay() {
-    if (state.replay) {
-      navigate(state.replay.path, { state: state.replay.state, replace: true })
-    } else {
-      navigate('/')
-    }
+  function goToLobby() {
+    navigate(`/lobby/${code}`, {
+      replace: true,
+      state: {
+        gameMode: state.gameMode,
+        levels: state.levels,
+        questionCount: state.questionCount,
+        timePerQuestion: state.timePerQuestion,
+        fromResults: true,
+      },
+    })
   }
+
+  // Personne n'est obligé de cliquer : au bout d'un moment, tout le monde est ramené au
+  // salon automatiquement (comme un vrai retour de partie multijoueur).
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAutoReturnLeft((t) => {
+        if (t <= 1) {
+          clearInterval(interval)
+          goToLobby()
+          return 0
+        }
+        return t - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className={styles.page}>
@@ -123,13 +154,17 @@ export function ResultsScreen() {
       </div>
 
       <div className={styles.actions}>
-        <Button variant="primary" onClick={replay}>
+        <Button variant="primary" onClick={goToLobby}>
           Rejouer
         </Button>
         <Button variant="outline" onClick={() => navigate('/')}>
           Retour à l'accueil
         </Button>
       </div>
+      <div className={styles.autoReturnNote}>
+        Retour automatique au salon dans {autoReturnLeft}s
+      </div>
     </div>
   )
 }
+
