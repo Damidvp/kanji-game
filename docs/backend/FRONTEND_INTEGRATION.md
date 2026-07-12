@@ -108,6 +108,7 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 | `/topic/room/{code}/round` | `{roundIndex, kanji: {character, onyomi, kunyomi, strokeCount}, options: string[] \| null, endsAt}` | Nouvelle manche. `options` = 4 propositions **mélangées** pour le Quiz (la bonne n'est jamais indiquée), `null` pour l'Écriture. `endsAt` est un timestamp ISO — c'est l'horloge serveur qui fait foi pour le compte à rebours. |
 | `/topic/room/{code}/round-status` | `{roundIndex, answeredParticipantIds: number[], totalActiveParticipants}` | Après chaque réponse reçue — pour afficher qui a répondu sans révéler le contenu |
 | `/topic/room/{code}/results` | `{ranking: [{participantId, name, rank, totalPoints, avgStrokeScore}]}` | Fin de partie (dernière manche jouée) |
+| `/topic/room/{code}/answer-result/{participantId}` | `{roundIndex, correct: boolean, points}` | **Quiz uniquement.** Envoyé juste après l'enregistrement de la réponse — confirmation privée pour ce joueur (l'UX validée révèle correct/faux + points immédiatement). Ce n'est pas un vrai canal STOMP "utilisateur" (la connexion WS n'est pas authentifiée) : le topic est juste scopé par `participantId`, à s'abonner dès que le client connaît le sien (après le join). Écriture non concernée : le score est déjà calculé côté client par HanziWriter. |
 
 **Envoyer sur ces destinations applicatives** :
 
@@ -117,6 +118,18 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 | `/app/room/{code}/enter-lobby` | `{sessionToken}` | À envoyer quand le client affiche effectivement l'écran Lobby après un `RESULTS→LOBBY`. Fait passer *ce* participant de `VIEWING_RESULTS` à `IN_LOBBY` (chacun à son rythme, cf. §7.5 de SPECIFICATIONS_BACKEND.md). |
 
 **Important** : l'état de partie (manche en cours, qui a répondu) est gardé en mémoire côté serveur, pas en base — si le backend redémarre pendant une partie, la partie est perdue (acceptable en dev/démo, à garder en tête).
+
+## 4bis. Bugs trouvés et corrigés pendant cette phase (2026-07-12)
+
+En branchant Quiz/Écriture/Résultats sur le vrai moteur de jeu, trois bugs backend latents (jamais exercés par les tests manuels de la phase précédente, qui ne rejouaient pas une partie dans le même salon) ont été trouvés et corrigés :
+
+- **"Rejouer" dans le même salon plantait** (`UNIQUE(room_id, round_index)` sur `game_round` entrait en collision avec les manches de la partie précédente du même salon). Migration `V2__game_round_play_count.sql` : ajout de `play_count` sur `game_room`/`game_round` (incrémenté à chaque lancement), contrainte devenue `UNIQUE(room_id, play_count, round_index)`. `round_index` reste 0-based par partie, inchangé côté client.
+- **Les scores de résultats étaient cumulés sur toutes les parties précédentes du même salon** (même cause racine : `GameAnswerRepository.aggregateScoresByRoom` n'était pas scopé par tentative). Corrigé en même temps, filtré par `play_count`.
+- **`POST /{code}/start` pouvait laisser le salon bloqué "lancé mais sans manche"** si la création de la 1ère manche échouait après que le statut soit déjà passé à `IN_PROGRESS` (deux appels `@Transactional` séparés, non atomiques). `RoomController.start` est maintenant lui-même `@Transactional`, rendant les deux étapes atomiques.
+
+Un salon créé avant cette migration reste indéfiniment bloqué en `IN_PROGRESS` si vous relancez `mvn spring-boot:run` après cette phase et retombez sur ce genre d'état : `UPDATE game_room SET status='LOBBY' WHERE code='...'` en direct, ou plus simplement en recréer un.
+
+**Course sur la 1ère manche après le lancement** : `startGame` déclenche le passage à `IN_PROGRESS` (broadcast `/topic/room/{code}`) puis la 1ère manche (broadcast `/topic/room/{code}/round`) séparément — rien ne garantit qu'un client qui vient de se (re)connecter à son WS capte les deux dans l'ordre. `LobbyScreen.tsx` gère ça en n'attendant pas seulement le changement de statut : il attend aussi d'avoir reçu la 1ère manche, puis la transmet à `QuizScreen`/`WritingScreen` via l'état de navigation React Router (`state: { firstRound }`) plutôt que de compter sur leur propre resouscription WS pour la recevoir (elle ne le pourrait pas — pas de `GET /round` pour la rattraper après coup, cf. gap ci-dessous). Le même souci existe pour `/topic/room/{code}/results` en toute fin de partie, réglé pareil (`state: { results }`).
 
 ## 5. Ce qui n'est PAS encore fait côté backend (gaps connus)
 
@@ -131,12 +144,12 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 
 | Fichier mock | Remplacer par | Écran(s) concerné(s) |
 |---|---|---|
-| `frontend/src/mocks/kanji.ts` (`mockKanjiPool`, `buildQuizQuestions`, `buildWritingRounds`) | `GET /api/kanji?levels=...` pour le pool ; `buildQuizQuestions`/`buildWritingRounds` deviennent inutiles côté client — c'est le serveur qui choisit le kanji et génère les options à chaque manche, diffusé sur `/topic/room/{code}/round` | `QuizScreen.tsx`, `WritingScreen.tsx` |
-| `frontend/src/mocks/lobby.ts` (`mockLobbyPlayers`, `MOCK_LOBBY_CODE`) | `POST /api/rooms`, `GET/POST /api/rooms/{code}/join`, `PATCH /api/rooms/{code}/settings`, `/topic/room/{code}` — **fait**, voir `frontend/src/lib/rooms.ts` + `frontend/src/hooks/useRoomSocket.ts` | `LobbyScreen.tsx` |
-| `frontend/src/mocks/profile.ts` | `GET /api/profile/me` — **incomplet, voir gap §5** | `ProfileScreen.tsx` |
-| `frontend/src/mocks/jlptLevels.ts` | Probablement à garder tel quel (juste la liste statique N5..N1 + libellés/couleurs, pas de contrepartie serveur nécessaire) | Plusieurs écrans |
+| `frontend/src/mocks/kanji.ts` (`mockKanjiPool`, `buildQuizQuestions`, `buildWritingRounds`) | `GET /api/kanji?levels=...` (via `frontend/src/lib/kanji.ts`, utilisé pour les significations FR côté Écriture) ; `buildQuizQuestions`/`buildWritingRounds` **fait, supprimés côté client** — c'est le serveur qui choisit le kanji et génère les options à chaque manche, diffusé sur `/topic/room/{code}/round` | `QuizScreen.tsx`, `WritingScreen.tsx` — **fait** |
+| `frontend/src/mocks/lobby.ts` (`mockLobbyPlayers`, `MOCK_LOBBY_CODE`) | `POST /api/rooms`, `GET/POST /api/rooms/{code}/join`, `PATCH /api/rooms/{code}/settings`, `/topic/room/{code}` — **fait**, voir `frontend/src/lib/rooms.ts` + `frontend/src/hooks/useRoomSocket.ts` | `LobbyScreen.tsx` — **fait** |
+| `frontend/src/mocks/profile.ts` | `GET /api/profile/me` — **incomplet, voir gap §5** | `ProfileScreen.tsx` — pas encore fait |
+| `frontend/src/mocks/jlptLevels.ts` | Gardé tel quel (liste statique N5..N1 + libellés/couleurs) | Plusieurs écrans |
 
-Les bots simulés (délais aléatoires, départs aléatoires) dans `QuizScreen.tsx`/`WritingScreen.tsx` sont entièrement à supprimer — c'est exactement ce que le vrai WebSocket remplace.
+Les bots simulés (délais aléatoires, départs aléatoires) dans `QuizScreen.tsx`/`WritingScreen.tsx` ont été **entièrement supprimés**, remplacés par le vrai WebSocket (`useRoomSocket`, voir §4bis pour la subtilité de la 1ère manche/des résultats). `ResultsScreen.tsx` est branché sur `/topic/room/{code}/results` + `POST /api/rooms/{code}/replay` + `/app/room/{code}/enter-lobby` — **fait**. Simplification assumée : la colonne "PRÉCISION" du tableau de résultats affiche `—` en mode Quiz (le serveur ne renvoie que `totalPoints`, pas un taux de bonnes réponses séparé — voir §4 `answer-result` pour le détail par manche, disponible en direct mais pas agrégé en fin de partie) ; en Écriture, `avgStrokeScore` sert à la fois de score et de précision, comme dans le mock d'origine.
 
 **Écarts constatés par rapport à ce document pendant l'implémentation (2026-07-12)**, arbitrés avec Damien :
 - Aucune UI ne collectait de nom pour les invités (le mock utilisait un nom fixe). Ajout minimal : `components/GuestNameModal.tsx`, déclenché une seule fois par `components/PlayButton.tsx` (bouton "Jouer maintenant"/"Commencer à jouer" partagé Accueil+TopNav) puis mémorisé en `localStorage` (`kanji-game:guestName`).
@@ -145,12 +158,12 @@ Les bots simulés (délais aléatoires, départs aléatoires) dans `QuizScreen.t
 
 ## 7. Ordre d'implémentation suggéré
 
-1. Générer/persister le `sessionToken` (localStorage) au premier lancement de l'app.
-2. Brancher `HomeScreen`/`AuthScreen` sur `/api/auth/*` (garder le mode invité qui marchait déjà sans compte).
-3. Brancher `LobbyScreen` sur les routes REST salons + `/topic/room/{code}` — c'est l'écran le plus autonome à valider avant de toucher au temps réel des manches.
-4. Client STOMP partagé (probablement un hook/contexte React) pour la connexion WebSocket, réutilisé par Lobby, Quiz, Écriture, Résultats.
-5. Brancher `QuizScreen`/`WritingScreen` sur `/app/room/{code}/answer` + `/topic/room/{code}/round` + `/topic/room/{code}/round-status` — retirer toute la logique de bots/timers simulés.
-6. Brancher `ResultsScreen` sur `/topic/room/{code}/results` + `POST /api/rooms/{code}/replay` + `/app/room/{code}/enter-lobby`.
-7. `ProfileScreen` : soit construire les stats manquantes côté backend d'abord (retour rapide vers une session backend), soit brancher partiellement (`objectiveLevel` seulement) en attendant.
+1. ~~Générer/persister le `sessionToken` (localStorage) au premier lancement de l'app.~~ **Fait, validé 2026-07-12.**
+2. ~~Brancher `HomeScreen`/`AuthScreen` sur `/api/auth/*`~~ **Fait, validé 2026-07-12.**
+3. ~~Brancher `LobbyScreen` sur les routes REST salons + `/topic/room/{code}`~~ **Fait, validé 2026-07-12.** A aussi nécessité `PATCH /api/rooms/{code}/settings` (absent du contrat d'origine, voir §3) et une petite modale de nom invité (`GuestNameModal`/`PlayButton`, voir plus haut).
+4. ~~Client STOMP partagé~~ **Fait, validé 2026-07-12** (`frontend/src/hooks/useRoomSocket.ts` + `useRoomConnection.ts`).
+5. ~~Brancher `QuizScreen`/`WritingScreen`~~ **Fait, validé 2026-07-12** (parties Quiz et Écriture jouées jusqu'au bout en réel, y compris via timeout serveur). A nécessité un nouveau canal WS privé (`/answer-result/{participantId}`, voir §4) pour le feedback correct/faux immédiat du Quiz, absent du contrat d'origine.
+6. ~~Brancher `ResultsScreen`~~ **Fait, validé 2026-07-12.**
+7. `ProfileScreen` : reste à faire — soit construire les stats manquantes côté backend d'abord, soit brancher partiellement (`objectiveLevel` seulement) en attendant.
 
 Comme pour les phases précédentes : construire un écran, le vérifier soi-même dans le navigateur avec le backend réellement lancé (pas juste compiler), proposer à Damien pour validation avant de passer au suivant.

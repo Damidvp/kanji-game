@@ -4,6 +4,12 @@
   padding: 50px 60px 80px;
 }
 
+.error {
+  color: var(--color-error-border);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
 .header {
   display: flex;
   justify-content: space-between;

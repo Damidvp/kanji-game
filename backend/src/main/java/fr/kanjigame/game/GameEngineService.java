@@ -70,6 +70,13 @@ public class GameEngineService {
 
     @Transactional
     public void startGame(String code) {
+        // Chaque lancement (première partie ou "Rejouer" dans le même salon) incrémente
+        // play_count, qui distingue les manches de parties successives d'un même salon —
+        // round_index redémarre à 0 à chaque fois, cf. V2__game_round_play_count.sql.
+        gameRoomRepository.findByCode(code).ifPresent(room -> {
+            room.setPlayCount(room.getPlayCount() + 1);
+            gameRoomRepository.save(room);
+        });
         runtimes.put(code, new RoomRuntimeState());
         startRound(code, 0);
     }
@@ -101,13 +108,16 @@ public class GameEngineService {
         }
 
         GameAnswer answer = new GameAnswer(round, participant);
+        boolean correct = false;
+        int points = 0;
         if (room.getGameMode() == GameMode.QUIZ) {
             long elapsedMs = Duration.between(round.getStartedAt(), now).toMillis();
             double ratio = Math.min(1.0, elapsedMs / (room.getTimePerQuestionSeconds() * 1000.0));
-            boolean correct = submission.selectedOption() != null && submission.selectedOption().equals(state.correctOption);
+            correct = submission.selectedOption() != null && submission.selectedOption().equals(state.correctOption);
+            points = correct ? (int) Math.round(1000 - 999 * ratio) : 0;
             answer.setSelectedOption(submission.selectedOption());
             answer.setIsCorrect(correct);
-            answer.setPoints(correct ? (int) Math.round(1000 - 999 * ratio) : 0);
+            answer.setPoints(points);
         } else {
             Integer strokeScore = submission.strokeScore() == null ? 0 : Math.max(0, Math.min(100, submission.strokeScore()));
             Integer strokeMistakes = submission.strokeMistakes() == null ? 0 : Math.max(0, submission.strokeMistakes());
@@ -120,6 +130,11 @@ public class GameEngineService {
             return; // course : déjà enregistré par une requête concurrente
         }
         state.answeredParticipantIds.add(participant.getId());
+
+        if (room.getGameMode() == GameMode.QUIZ) {
+            messagingTemplate.convertAndSend("/topic/room/" + code + "/answer-result/" + participant.getId(),
+                    new AnswerResultBroadcast(round.getRoundIndex(), correct, points));
+        }
 
         long activeCount = gameParticipantRepository.countByRoomIdAndStatusNotIn(room.getId(),
                 List.of(ParticipantStatus.LEFT, ParticipantStatus.KICKED));
@@ -219,7 +234,7 @@ public class GameEngineService {
         state.usedKanjiIds.add(kanji.getId());
 
         OffsetDateTime endsAt = OffsetDateTime.now().plusSeconds(room.getTimePerQuestionSeconds());
-        GameRound round = new GameRound(room, index, kanji, endsAt);
+        GameRound round = new GameRound(room, index, room.getPlayCount(), kanji, endsAt);
         gameRoundRepository.save(round);
 
         state.currentRoundId = round.getId();
@@ -272,7 +287,7 @@ public class GameEngineService {
         }
 
         Map<Long, GameAnswerRepository.ParticipantScore> scoresByParticipant = new java.util.HashMap<>();
-        for (var score : gameAnswerRepository.aggregateScoresByRoom(room.getId())) {
+        for (var score : gameAnswerRepository.aggregateScoresByRoom(room.getId(), room.getPlayCount())) {
             scoresByParticipant.put(score.getParticipantId(), score);
         }
 

@@ -1,21 +1,13 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
-import { useAuth } from '../contexts/AuthContext'
 import { getSessionToken } from '../lib/session'
-import { getGuestName, setGuestName } from '../lib/guest'
-import {
-  joinRoom,
-  setReady,
-  kickParticipant,
-  startGame,
-  updateRoomSettings,
-  type RoomState,
-  type GameMode,
-} from '../lib/rooms'
-import { useRoomSocket } from '../hooks/useRoomSocket'
+import { setGuestName } from '../lib/guest'
+import { setReady, kickParticipant, startGame, updateRoomSettings, type GameMode } from '../lib/rooms'
+import { useRoomSocket, type RoundPayload } from '../hooks/useRoomSocket'
+import { useRoomConnection } from '../hooks/useRoomConnection'
 import styles from './LobbyScreen.module.css'
 
 const gameModeLabels: Record<GameMode, string> = {
@@ -35,52 +27,33 @@ const LOBBY_MAX_PLAYERS = 8
 export function LobbyScreen() {
   const { code } = useParams()
   const navigate = useNavigate()
-  const { profile, loading: authLoading } = useAuth()
 
-  const [roomState, setRoomState] = useState<RoomState | null>(null)
-  const [myParticipantId, setMyParticipantId] = useState<number | null>(null)
-  const [needsGuestName, setNeedsGuestName] = useState(false)
-  const [error, setError] = useState('')
+  const { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState } =
+    useRoomConnection(code)
   const [copied, setCopied] = useState(false)
+  const [firstRound, setFirstRound] = useState<RoundPayload | null>(null)
+  const [launchError, setLaunchError] = useState('')
 
-  const applyState = useCallback((state: RoomState) => {
-    setRoomState(state)
-    const mine = state.participants.find((p) => p.isYou)
-    if (mine) setMyParticipantId(mine.id)
-  }, [])
-
-  useEffect(() => {
-    if (!code || authLoading) return
-    const sessionToken = getSessionToken()
-    const guestName = profile ? undefined : (getGuestName() ?? undefined)
-    if (!profile && !guestName) {
-      setNeedsGuestName(true)
-      return
-    }
-    let cancelled = false
-    joinRoom(code, sessionToken, guestName)
-      .then((state) => {
-        if (!cancelled) applyState(state)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Ce salon est introuvable ou la partie a déjà commencé.')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [code, profile, authLoading, applyState])
-
-  const { connected, sendEnterLobby } = useRoomSocket(code ?? '', { onRoomState: applyState })
+  const { connected, sendEnterLobby } = useRoomSocket(code ?? '', myParticipantId, {
+    onRoomState: applyState,
+    onRound: setFirstRound,
+  })
 
   useEffect(() => {
     if (connected) sendEnterLobby(getSessionToken())
   }, [connected, sendEnterLobby])
 
+  // On n'attend pas seulement le passage à IN_PROGRESS : la toute première manche est diffusée
+  // séparément juste après, et rien ne garantit son ordre d'arrivée. On attend les deux pour
+  // éviter que Quiz/Écriture démarre sans donnée de manche (le serveur ne permet pas de la
+  // récupérer après coup).
   useEffect(() => {
-    if (roomState?.status === 'IN_PROGRESS' && code) {
-      navigate(roomState.gameMode === 'QUIZ' ? `/lobby/${code}/quiz` : `/lobby/${code}/ecriture`)
+    if (roomState?.status === 'IN_PROGRESS' && firstRound && code) {
+      navigate(roomState.gameMode === 'QUIZ' ? `/lobby/${code}/quiz` : `/lobby/${code}/ecriture`, {
+        state: { firstRound },
+      })
     }
-  }, [roomState?.status, roomState?.gameMode, code, navigate])
+  }, [roomState?.status, roomState?.gameMode, firstRound, code, navigate])
 
   function handleGuestNameSubmit(name: string) {
     setGuestName(name)
@@ -111,7 +84,7 @@ export function LobbyScreen() {
     if (!code) return
     startGame(code, getSessionToken())
       .then(applyState)
-      .catch(() => setError('Impossible de lancer la partie.'))
+      .catch(() => setLaunchError('Impossible de lancer la partie.'))
   }
 
   async function copyLink() {
@@ -337,9 +310,12 @@ export function LobbyScreen() {
           </div>
 
           {you?.isHost && (
-            <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
-              Lancer la partie
-            </Button>
+            <>
+              <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
+                Lancer la partie
+              </Button>
+              {launchError && <div className={styles.error}>{launchError}</div>}
+            </>
           )}
         </div>
       </div>

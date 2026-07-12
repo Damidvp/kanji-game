@@ -18,10 +18,10 @@ public interface GameAnswerRepository extends JpaRepository<GameAnswer, Long> {
                    COALESCE(SUM(a.points), 0) AS totalPoints,
                    AVG(a.strokeScore) AS avgStrokeScore
             FROM GameAnswer a
-            WHERE a.round.room.id = :roomId
+            WHERE a.round.room.id = :roomId AND a.round.playCount = :playCount
             GROUP BY a.participant.id
             """)
-    List<ParticipantScore> aggregateScoresByRoom(@Param("roomId") Long roomId);
+    List<ParticipantScore> aggregateScoresByRoom(@Param("roomId") Long roomId, @Param("playCount") int playCount);
 
     interface ParticipantScore {
         Long getParticipantId();

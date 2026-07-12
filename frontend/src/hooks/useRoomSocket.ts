@@ -27,16 +27,25 @@ export interface ResultsPayload {
   }[]
 }
 
+export interface AnswerResultPayload {
+  roundIndex: number
+  correct: boolean
+  points: number
+}
+
 interface RoomSocketHandlers {
   onRoomState?: (state: RoomState) => void
   onRound?: (round: RoundPayload) => void
   onRoundStatus?: (status: RoundStatusPayload) => void
   onResults?: (results: ResultsPayload) => void
+  onAnswerResult?: (result: AnswerResultPayload) => void
 }
 
 // Client STOMP/SockJS partagé, réutilisé par tous les écrans qui suivent un salon en direct
 // (Lobby, Quiz, Écriture, Résultats). Une connexion par montage d'écran, sur /ws.
-export function useRoomSocket(code: string, handlers: RoomSocketHandlers) {
+// `myParticipantId`, une fois connu (après le join), abonne en plus au canal de feedback
+// privé du Quiz (/answer-result/{participantId}), pas disponible au moment de la connexion.
+export function useRoomSocket(code: string, myParticipantId: number | null, handlers: RoomSocketHandlers) {
   const clientRef = useRef<Client | null>(null)
   const [connected, setConnected] = useState(false)
   const handlersRef = useRef(handlers)
@@ -73,6 +82,19 @@ export function useRoomSocket(code: string, handlers: RoomSocketHandlers) {
       clientRef.current = null
     }
   }, [code])
+
+  useEffect(() => {
+    if (!connected || myParticipantId == null) return
+    const client = clientRef.current
+    if (!client) return
+    const subscription = client.subscribe(
+      `/topic/room/${code}/answer-result/${myParticipantId}`,
+      (message) => {
+        handlersRef.current.onAnswerResult?.(JSON.parse(message.body) as AnswerResultPayload)
+      },
+    )
+    return () => subscription.unsubscribe()
+  }, [connected, myParticipantId, code])
 
   const sendAnswer = useCallback(
     (

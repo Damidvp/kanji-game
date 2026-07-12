@@ -59,6 +59,9 @@ public class GameRoom {
     @Column(name = "current_round_index", nullable = false)
     private int currentRoundIndex = 0;
 
+    @Column(name = "play_count", nullable = false)
+    private int playCount = 0;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "game_room_level", joinColumns = @JoinColumn(name = "room_id"))
     @Enumerated(EnumType.STRING)
@@ -154,6 +157,14 @@ public class GameRoom {
 
     public void setCurrentRoundIndex(int currentRoundIndex) {
         this.currentRoundIndex = currentRoundIndex;
+    }
+
+    public int getPlayCount() {
+        return playCount;
+    }
+
+    public void setPlayCount(int playCount) {
+        this.playCount = playCount;
     }
 
     public Set<JlptLevel> getLevels() {

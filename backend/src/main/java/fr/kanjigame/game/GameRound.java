@@ -29,6 +29,9 @@ public class GameRound {
     @Column(name = "round_index", nullable = false)
     private int roundIndex;
 
+    @Column(name = "play_count", nullable = false)
+    private int playCount;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "kanji_id", nullable = false)
     private Kanji kanji;
@@ -42,9 +45,10 @@ public class GameRound {
     protected GameRound() {
     }
 
-    public GameRound(GameRoom room, int roundIndex, Kanji kanji, OffsetDateTime endsAt) {
+    public GameRound(GameRoom room, int roundIndex, int playCount, Kanji kanji, OffsetDateTime endsAt) {
         this.room = room;
         this.roundIndex = roundIndex;
+        this.playCount = playCount;
         this.kanji = kanji;
         this.endsAt = endsAt;
     }
@@ -59,6 +63,10 @@ public class GameRound {
 
     public int getRoundIndex() {
         return roundIndex;
+    }
+
+    public int getPlayCount() {
+        return playCount;
     }
 
     public Kanji getKanji() {
