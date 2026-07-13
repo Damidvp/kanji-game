@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { getSessionToken } from '../lib/session'
-import { getGuestName } from '../lib/guest'
+import { getGuestName, setGuestName } from '../lib/guest'
 import { joinRoom, type RoomState } from '../lib/rooms'
 
 // Rejoint (ou reconnecte, de façon idempotente) le salon `code` au montage, en gérant le cas
@@ -14,6 +14,11 @@ export function useRoomConnection(code: string | undefined) {
   const [myParticipantId, setMyParticipantId] = useState<number | null>(null)
   const [needsGuestName, setNeedsGuestName] = useState(false)
   const [error, setError] = useState('')
+  // Incrémenté par submitGuestName pour redéclencher la tentative de connexion une fois le nom
+  // fourni — sans lui, l'effet ci-dessous (dont les dépendances ne changent pas quand on sort
+  // juste de l'état "needsGuestName") ne retentait jamais après la saisie, laissant l'écran
+  // bloqué indéfiniment (bug remonté par Damien : lien direct vers un salon → page vide).
+  const [guestNameAttempt, setGuestNameAttempt] = useState(0)
 
   const applyState = useCallback((state: RoomState) => {
     setRoomState(state)
@@ -29,6 +34,7 @@ export function useRoomConnection(code: string | undefined) {
       setNeedsGuestName(true)
       return
     }
+    setNeedsGuestName(false)
     let cancelled = false
     joinRoom(code, sessionToken, guestName)
       .then((state) => {
@@ -40,7 +46,12 @@ export function useRoomConnection(code: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [code, profile, authLoading, applyState])
+  }, [code, profile, authLoading, applyState, guestNameAttempt])
 
-  return { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState }
+  function submitGuestName(name: string) {
+    setGuestName(name)
+    setGuestNameAttempt((n) => n + 1)
+  }
+
+  return { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState }
 }

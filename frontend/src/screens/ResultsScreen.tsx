@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { getSessionToken } from '../lib/session'
-import { setGuestName } from '../lib/guest'
 import { leaveRoom, replayGame } from '../lib/rooms'
 import { useRoomConnection } from '../hooks/useRoomConnection'
 import { useRoomSocket, type ResultsPayload } from '../hooks/useRoomSocket'
@@ -30,7 +29,7 @@ export function ResultsScreen() {
   const location = useLocation()
   const locState = (location.state as ResultsLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
     useRoomConnection(code)
   const [results, setResults] = useState<ResultsPayload | null>(locState.results ?? null)
   const [autoReturnLeft, setAutoReturnLeft] = useState(AUTO_RETURN_SECONDS)
@@ -59,11 +58,6 @@ export function ResultsScreen() {
     return () => clearInterval(interval)
   }, [])
 
-  function handleGuestNameSubmit(name: string) {
-    setGuestName(name)
-    setNeedsGuestName(false)
-  }
-
   function goToLobby() {
     if (!code) return
     replayGame(code, getSessionToken()).catch(() => {})
@@ -75,7 +69,7 @@ export function ResultsScreen() {
   }
 
   if (needsGuestName) {
-    return <GuestNameModal onSubmit={handleGuestNameSubmit} onCancel={() => navigate('/')} />
+    return <GuestNameModal onSubmit={submitGuestName} onCancel={() => navigate('/')} />
   }
 
   if (error) {

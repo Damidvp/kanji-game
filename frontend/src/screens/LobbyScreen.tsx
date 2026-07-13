@@ -4,7 +4,6 @@ import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { getSessionToken } from '../lib/session'
-import { setGuestName } from '../lib/guest'
 import { setReady, kickParticipant, startGame, updateRoomSettings, type GameMode } from '../lib/rooms'
 import { useRoomSocket, type RoundPayload } from '../hooks/useRoomSocket'
 import { useRoomConnection } from '../hooks/useRoomConnection'
@@ -28,7 +27,7 @@ export function LobbyScreen() {
   const { code } = useParams()
   const navigate = useNavigate()
 
-  const { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
     useRoomConnection(code)
   const [copied, setCopied] = useState(false)
   const [firstRound, setFirstRound] = useState<RoundPayload | null>(null)
@@ -54,11 +53,6 @@ export function LobbyScreen() {
       })
     }
   }, [roomState?.status, roomState?.gameMode, firstRound, code, navigate])
-
-  function handleGuestNameSubmit(name: string) {
-    setGuestName(name)
-    setNeedsGuestName(false)
-  }
 
   const you = roomState?.participants.find((p) => p.id === myParticipantId) ?? null
   const activeParticipants =
@@ -128,7 +122,7 @@ export function LobbyScreen() {
   }
 
   if (needsGuestName) {
-    return <GuestNameModal onSubmit={handleGuestNameSubmit} onCancel={() => navigate('/')} />
+    return <GuestNameModal onSubmit={submitGuestName} onCancel={() => navigate('/')} />
   }
 
   if (error) {

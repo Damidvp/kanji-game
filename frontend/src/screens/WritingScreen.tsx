@@ -4,7 +4,6 @@ import HanziWriter from 'hanzi-writer'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { getSessionToken } from '../lib/session'
-import { setGuestName } from '../lib/guest'
 import { leaveRoom } from '../lib/rooms'
 import { getKanjiPool } from '../lib/kanji'
 import { useRoomConnection } from '../hooks/useRoomConnection'
@@ -29,7 +28,7 @@ export function WritingScreen() {
   const location = useLocation()
   const locState = (location.state as WritingLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
     useRoomConnection(code)
 
   const [round, setRound] = useState<RoundPayload | null>(locState.firstRound ?? null)
@@ -153,11 +152,6 @@ export function WritingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round?.roundIndex, round?.endsAt])
 
-  function handleGuestNameSubmit(name: string) {
-    setGuestName(name)
-    setNeedsGuestName(false)
-  }
-
   function restartCharacter() {
     if (validated || !writerRef.current) return
     firstTryCorrectRef.current = 0
@@ -176,7 +170,7 @@ export function WritingScreen() {
   }
 
   if (needsGuestName) {
-    return <GuestNameModal onSubmit={handleGuestNameSubmit} onCancel={() => navigate('/')} />
+    return <GuestNameModal onSubmit={submitGuestName} onCancel={() => navigate('/')} />
   }
 
   if (error) {

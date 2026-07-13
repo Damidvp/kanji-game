@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { getSessionToken } from '../lib/session'
-import { setGuestName } from '../lib/guest'
 import { leaveRoom } from '../lib/rooms'
 import { useRoomConnection } from '../hooks/useRoomConnection'
 import {
@@ -32,7 +31,7 @@ export function QuizScreen() {
   const location = useLocation()
   const locState = (location.state as QuizLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, setNeedsGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
     useRoomConnection(code)
 
   const [round, setRound] = useState<RoundPayload | null>(locState.firstRound ?? null)
@@ -69,11 +68,6 @@ export function QuizScreen() {
     return () => clearInterval(interval)
   }, [round])
 
-  function handleGuestNameSubmit(name: string) {
-    setGuestName(name)
-    setNeedsGuestName(false)
-  }
-
   function selectAnswer(option: string) {
     if (selected || !round) return
     setSelected(option)
@@ -90,7 +84,7 @@ export function QuizScreen() {
   }
 
   if (needsGuestName) {
-    return <GuestNameModal onSubmit={handleGuestNameSubmit} onCancel={() => navigate('/')} />
+    return <GuestNameModal onSubmit={submitGuestName} onCancel={() => navigate('/')} />
   }
 
   if (error) {
