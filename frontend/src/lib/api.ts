@@ -1,6 +1,19 @@
 import { getAuthToken } from './auth'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+const API_BASE_OVERRIDE_KEY = 'kanji-game:apiBaseUrl'
+
+// Permet de tester le site déployé (GitHub Pages) contre un backend qui tourne en local sur un
+// autre appareil du même réseau (ex. téléphone + PC sur le même Wi-Fi) — le build statique ne
+// peut pas savoir à l'avance quelle IP LAN utiliser. Ouvrir une fois
+// https://damidvp.github.io/kanji-game/?api=http://<IP-LAN-du-PC>:8080 (voir ipconfig côté PC,
+// et autoriser le port 8080 dans le pare-feu Windows) ; mémorisé ensuite en localStorage.
+const queryOverride = new URLSearchParams(window.location.search).get('api')
+if (queryOverride) {
+  localStorage.setItem(API_BASE_OVERRIDE_KEY, queryOverride)
+}
+
+export const API_BASE_URL =
+  localStorage.getItem(API_BASE_OVERRIDE_KEY) || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 export class ApiError extends Error {
   status: number

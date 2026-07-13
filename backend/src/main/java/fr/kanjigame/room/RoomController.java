@@ -3,6 +3,7 @@ package fr.kanjigame.room;
 import fr.kanjigame.game.GameEngineService;
 import fr.kanjigame.user.AppUser;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,5 +78,14 @@ public class RoomController {
     @PostMapping("/{code}/replay")
     public RoomStateResponse replay(@PathVariable String code, @Valid @RequestBody StartRoomRequest request) {
         return gameEngineService.replay(code, request.sessionToken());
+    }
+
+    // Hôte uniquement : passe à la manche suivante sans attendre le délai de grâce/timeout
+    // (voir GameEngineService.ROUND_ADVANCE_GRACE_DELAY). Pas de RoomStateResponse à renvoyer :
+    // l'effet arrive via le broadcast /topic/room/{code}/round.
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PostMapping("/{code}/next-round")
+    public void nextRound(@PathVariable String code, @Valid @RequestBody StartRoomRequest request) {
+        gameEngineService.hostAdvance(code, request.sessionToken());
     }
 }

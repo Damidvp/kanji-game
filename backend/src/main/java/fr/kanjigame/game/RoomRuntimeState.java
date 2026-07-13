@@ -19,6 +19,9 @@ class RoomRuntimeState {
     final Set<Long> answeredParticipantIds = ConcurrentHashMap.newKeySet();
     final Set<Long> usedKanjiIds = Collections.synchronizedSet(new HashSet<>());
     volatile ScheduledFuture<?> timeoutFuture;
+    // Délai de grâce laissé à l'hôte pour cliquer "Suivant" une fois tout le monde répondu,
+    // avant l'avance automatique — cf. GameEngineService.GRACE_SECONDS.
+    volatile ScheduledFuture<?> graceFuture;
     volatile ScheduledFuture<?> autoReplayFuture;
     final AtomicBoolean advancing = new AtomicBoolean(false);
 

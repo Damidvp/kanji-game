@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { getSessionToken } from '../lib/session'
-import { leaveRoom } from '../lib/rooms'
+import { leaveRoom, advanceRound } from '../lib/rooms'
 import { useRoomConnection } from '../hooks/useRoomConnection'
 import {
   useRoomSocket,
@@ -19,6 +19,7 @@ interface QuizLocationState {
 }
 
 const URGENT_THRESHOLD_SECONDS = 5
+const GRACE_SECONDS = 10 // doit correspondre à ROUND_ADVANCE_GRACE_DELAY côté backend
 
 function computeTimeLeft(round: RoundPayload | null): number {
   if (!round) return 0
@@ -60,6 +61,26 @@ export function QuizScreen() {
     setSelected(null)
     setAnswerResult(null)
   }, [round?.roundIndex])
+
+  const answeredIds =
+    roundStatus?.roundIndex === round?.roundIndex ? roundStatus.answeredParticipantIds : []
+  const totalActive = roundStatus?.totalActiveParticipants ?? 0
+  const everyoneAnswered = totalActive > 0 && answeredIds.length >= totalActive
+
+  // Purement cosmétique (le vrai déclenchement est côté serveur, cf. ROUND_ADVANCE_GRACE_DELAY) :
+  // affiche un compte à rebours pendant le délai de grâce laissé à l'hôte pour cliquer "Suivant".
+  const [graceLeft, setGraceLeft] = useState<number | null>(null)
+  useEffect(() => {
+    if (!everyoneAnswered) {
+      setGraceLeft(null)
+      return
+    }
+    setGraceLeft(GRACE_SECONDS)
+    const interval = setInterval(() => {
+      setGraceLeft((t) => (t !== null && t > 1 ? t - 1 : 0))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [everyoneAnswered, round?.roundIndex])
 
   useEffect(() => {
     if (!round) return
@@ -105,10 +126,15 @@ export function QuizScreen() {
   const otherParticipants = roomState.participants.filter(
     (p) => p.id !== myParticipantId && p.status !== 'LEFT' && p.status !== 'KICKED',
   )
-  const answeredIds =
-    roundStatus?.roundIndex === round.roundIndex ? roundStatus.answeredParticipantIds : []
+  const isHost = roomState.participants.find((p) => p.id === myParticipantId)?.isHost ?? false
+  const isLastQuestion = round.roundIndex + 1 >= roomState.questionCount
   const answered = selected !== null
   const timerUrgent = timeLeft <= URGENT_THRESHOLD_SECONDS && !answered
+
+  function nextQuestion() {
+    if (!code) return
+    advanceRound(code, getSessionToken()).catch(() => {})
+  }
 
   return (
     <div className={styles.page}>
@@ -203,9 +229,24 @@ export function QuizScreen() {
 
           {answered && !answerResult && <div className={styles.waitingNote}>Réponse envoyée…</div>}
 
-          {answered && answerResult && (
+          {answered && answerResult && !everyoneAnswered && (
             <div className={styles.waitingNote}>
-              En attente des autres joueurs... ({answeredIds.length}/{roundStatus?.totalActiveParticipants ?? otherParticipants.length + 1})
+              En attente des autres joueurs... ({answeredIds.length}/{totalActive || otherParticipants.length + 1})
+            </div>
+          )}
+
+          {everyoneAnswered && !isHost && (
+            <div className={styles.waitingNote}>En attente de l'hôte...</div>
+          )}
+
+          {everyoneAnswered && isHost && (
+            <div className={styles.nextRow}>
+              {graceLeft !== null && (
+                <span className={styles.autoAdvanceNote}>Passage automatique dans {graceLeft}s</span>
+              )}
+              <Button variant="primary" onClick={nextQuestion}>
+                {isLastQuestion ? 'Voir les résultats →' : 'Question suivante →'}
+              </Button>
             </div>
           )}
 

@@ -39,6 +39,10 @@ public class GameEngineService {
     private static final Logger log = LoggerFactory.getLogger(GameEngineService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Duration AUTO_REPLAY_DELAY = Duration.ofSeconds(60);
+    // Délai de grâce laissé à l'hôte pour cliquer "Suivant"/"Voir les résultats" une fois que
+    // tout le monde a répondu, avant d'avancer automatiquement (repris de l'ancienne UX mockée,
+    // remis en place à la demande de Damien — l'avance instantanée façon Kahoot ne convenait pas).
+    private static final Duration ROUND_ADVANCE_GRACE_DELAY = Duration.ofSeconds(10);
 
     private final Map<String, RoomRuntimeState> runtimes = new ConcurrentHashMap<>();
 
@@ -142,8 +146,28 @@ public class GameEngineService {
                 new RoundStatusBroadcast(round.getRoundIndex(), List.copyOf(state.answeredParticipantIds), (int) activeCount));
 
         if (state.answeredParticipantIds.size() >= activeCount) {
-            advance(code, round.getRoundIndex());
+            scheduleGraceAdvance(code, state, round.getRoundIndex());
         }
+    }
+
+    /** Hôte uniquement : passe à la manche suivante sans attendre le délai de grâce/timeout. */
+    @Transactional
+    public void hostAdvance(String code, String sessionToken) {
+        GameRoom room = gameRoomRepository.findByCode(code)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Salon introuvable"));
+        GameParticipant participant = gameParticipantRepository.findByRoomIdAndSessionToken(room.getId(), sessionToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous ne faites pas partie de ce salon"));
+        if (!participant.isHost()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul l'hôte peut passer à la manche suivante");
+        }
+        if (room.getStatus() != RoomStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucune partie en cours");
+        }
+        RoomRuntimeState state = runtimes.get(code);
+        if (state == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucune manche en cours");
+        }
+        advance(code, state.currentRoundIndex);
     }
 
     @Transactional
@@ -156,8 +180,22 @@ public class GameEngineService {
         long activeCount = gameParticipantRepository.countByRoomIdAndStatusNotIn(room.getId(),
                 List.of(ParticipantStatus.LEFT, ParticipantStatus.KICKED));
         if (activeCount > 0 && state.answeredParticipantIds.size() >= activeCount) {
-            advance(code, state.currentRoundIndex);
+            scheduleGraceAdvance(code, state, state.currentRoundIndex);
         }
+    }
+
+    /**
+     * Tout le monde a répondu : au lieu d'avancer immédiatement, on laisse un court délai de
+     * grâce pendant lequel l'hôte peut cliquer "Suivant" (voir hostAdvance) — l'avance
+     * automatique n'intervient que si l'hôte ne fait rien. Idempotent si déjà programmé (une
+     * dernière réponse concurrente ne doit pas reprogrammer un second timer).
+     */
+    private void scheduleGraceAdvance(String code, RoomRuntimeState state, int roundIndex) {
+        if (state.graceFuture != null && !state.graceFuture.isDone()) {
+            return;
+        }
+        state.graceFuture = taskScheduler.schedule(() -> advance(code, roundIndex),
+                java.time.Instant.now().plus(ROUND_ADVANCE_GRACE_DELAY));
     }
 
     @Transactional
@@ -258,6 +296,9 @@ public class GameEngineService {
         }
         if (state.timeoutFuture != null) {
             state.timeoutFuture.cancel(false);
+        }
+        if (state.graceFuture != null) {
+            state.graceFuture.cancel(false);
         }
 
         GameRoom room = gameRoomRepository.findByCode(code).orElse(null);

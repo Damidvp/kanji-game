@@ -4,7 +4,7 @@ import HanziWriter from 'hanzi-writer'
 import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { getSessionToken } from '../lib/session'
-import { leaveRoom } from '../lib/rooms'
+import { leaveRoom, advanceRound } from '../lib/rooms'
 import { getKanjiPool } from '../lib/kanji'
 import { useRoomConnection } from '../hooks/useRoomConnection'
 import { useRoomSocket, type RoundPayload, type RoundStatusPayload, type ResultsPayload } from '../hooks/useRoomSocket'
@@ -16,6 +16,7 @@ interface WritingLocationState {
 
 const URGENT_THRESHOLD_SECONDS = 5
 const CANVAS_SIZE = 380
+const GRACE_SECONDS = 10 // doit correspondre à ROUND_ADVANCE_GRACE_DELAY côté backend
 
 function computeTimeLeft(round: RoundPayload | null): number {
   if (!round) return 0
@@ -60,6 +61,26 @@ export function WritingScreen() {
   const averageScore = scores.length
     ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
     : 0
+
+  const answeredIds =
+    roundStatus?.roundIndex === round?.roundIndex ? roundStatus.answeredParticipantIds : []
+  const totalActive = roundStatus?.totalActiveParticipants ?? 0
+  const everyoneAnswered = totalActive > 0 && answeredIds.length >= totalActive
+
+  // Purement cosmétique (le vrai déclenchement est côté serveur, cf. ROUND_ADVANCE_GRACE_DELAY) :
+  // affiche un compte à rebours pendant le délai de grâce laissé à l'hôte pour cliquer "Suivant".
+  const [graceLeft, setGraceLeft] = useState<number | null>(null)
+  useEffect(() => {
+    if (!everyoneAnswered) {
+      setGraceLeft(null)
+      return
+    }
+    setGraceLeft(GRACE_SECONDS)
+    const interval = setInterval(() => {
+      setGraceLeft((t) => (t !== null && t > 1 ? t - 1 : 0))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [everyoneAnswered, round?.roundIndex])
 
   // Le pool de kanji du salon donne les significations FR, absentes du payload de manche
   // (qui ne contient que caractère/lectures/nb de traits, cf. docs/backend/FRONTEND_INTEGRATION.md §4).
@@ -191,9 +212,14 @@ export function WritingScreen() {
   const otherParticipants = roomState.participants.filter(
     (p) => p.id !== myParticipantId && p.status !== 'LEFT' && p.status !== 'KICKED',
   )
-  const answeredIds =
-    roundStatus?.roundIndex === round.roundIndex ? roundStatus.answeredParticipantIds : []
+  const isHost = roomState.participants.find((p) => p.id === myParticipantId)?.isHost ?? false
+  const isLastRound = round.roundIndex + 1 >= roomState.questionCount
   const timerUrgent = timeLeft <= URGENT_THRESHOLD_SECONDS && !validated
+
+  function nextRound() {
+    if (!code) return
+    advanceRound(code, getSessionToken()).catch(() => {})
+  }
 
   return (
     <div className={styles.page}>
@@ -269,9 +295,24 @@ export function WritingScreen() {
             <div className={styles.scoreNote}>{lastScore}% de traits corrects du premier coup</div>
           )}
 
-          {validated && (
+          {validated && !everyoneAnswered && (
             <div className={styles.waitingNote}>
-              En attente des autres joueurs... ({answeredIds.length}/{roundStatus?.totalActiveParticipants ?? otherParticipants.length + 1})
+              En attente des autres joueurs... ({answeredIds.length}/{totalActive || otherParticipants.length + 1})
+            </div>
+          )}
+
+          {everyoneAnswered && !isHost && (
+            <div className={styles.waitingNote}>En attente de l'hôte...</div>
+          )}
+
+          {everyoneAnswered && isHost && (
+            <div className={styles.nextRow}>
+              {graceLeft !== null && (
+                <span className={styles.autoAdvanceNote}>Passage automatique dans {graceLeft}s</span>
+              )}
+              <Button variant="primary" onClick={nextRound}>
+                {isLastRound ? 'Voir les résultats →' : 'Kanji suivant →'}
+              </Button>
             </div>
           )}
         </div>

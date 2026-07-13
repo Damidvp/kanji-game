@@ -1,0 +1,33 @@
+Page d'accueil et navbar :
+
+- Navbar :
+1. Différencier les menus "principaux" Accueil, Mini-jeux, Niveaux JLPT, Classements des menus Profil/Connexion
+2. Certains menus ne sont pas visible sur la version mobile
+3. Le menu "Classements" semble inutile pour le moment (à voir pour intégrer un système de classement global dans une V2). Garder néanmoins les stats de chaque joueur, car cela pourra servir plus tard.
+4. Le menu "Mini-jeux" doit présenter avec un petit explicatif chaque mini-jeu. Pour chaque mini-jeu, ajouter un bouton "Jouer" ou "Essayer", qui permet d'ouvrir un lobby avec initialement le mini-jeu correspondant
+
+- Accueil :
+1. Le bouton "Voir les niveaux" doit ramener vers une nouvelle page (la même que pour Niveaux JLPT). Cette page doit présenter les 5 niveaux JLPT : liste des kanjis à étudier, correspondance niveau européen, petit explicatif pour chaque niveau
+2. La fenêtre "Quiz Kanji" à droite ne correspond plus à la véritable interface du quiz -> à modifier
+3. Le nombre de kanji par JLPT semble erronné en bas de page : recouper avec les informations stockées en BDD
+
+Page de profil :
+
+1. Les données ne doivent plus être mockées : enregistrer le nombre de parties jouer, le score moyen tous mini-jeux confondus, et les stats par niveau JLPT à partir de vraies données. Attention, le calcul doit se faire de manière optimisée : ne pas avoir à créer à chaque fois une ligne supplémentaire en BDD si possible.
+2. Pas de bouton "modifier" pour le niveau JLPT, ou en tout cas le système de mise à jour de l'objectif JLPT est flou. Il manque aussi la possibilité de modifier son pseudo, son adresse mail, son mot de passe.
+
+Page de connexion et inscription :
+
+1. Bouton "Mot de passe oublié ?" à gérer -> réinitialisation de mot de passe par mail
+2. Sur l'inscription, pas de validation. Le site retourne directement à l'accueil sans notification de création de compte.
+3. Une fois connecté, dans la navbar : différencier en mettant en évidence le pseudo (il se noie actuellement dans les menus de droite). Ecrire un message en évidence du style "Bonjour, <pseudo>" ou "Bienvenue, <pseudo>"
+4. Potentiellement un bug sur mobile : "Inscription impossible. Réessaie dans un instant", en essayant de créer un nouveau compte.
+
+Lobby :
+
+1. Rejoindre un lobby semble disfonctionnel dans certains cas. Si on essaie d'accéder directement au lien : page vide.
+Si un compte est loggé -> connecter automatiquement avec ce compte
+Si aucun compte n'est loggé -> afficher une fenêtre lorsqu'on tente d'accéder au lien, proposant de se connecter ou de jouer sans compte
+
+Mini-jeux :
+1. Bug détecté sur le passage des questions : quand tout le monde à répondu, cela passe directement à la question suivante. L'hôte n'a plus la possibilité d'attendre 10s ou de cliquer sur le bouton "Suivant".

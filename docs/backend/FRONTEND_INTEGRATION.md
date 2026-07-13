@@ -79,6 +79,7 @@ Le token JWT est valide 24h. Pas de refresh token, pas de logout côté serveur 
 | `POST /api/rooms/{code}/start` | `{sessionToken (hôte)}` | `RoomState` | 403 si pas hôte, 409 si déjà lancé. **Déclenche la 1ère manche côté WebSocket** — s'abonner aux topics WS *avant* d'appeler `/start`. |
 | `POST /api/rooms/{code}/replay` | `{sessionToken}` | `RoomState` | N'importe quel participant actif peut relancer (pas hôte-only), uniquement si `status == RESULTS`. Remet `status=LOBBY`, `ready=false` pour tous. |
 | `PATCH /api/rooms/{code}/settings` | `{sessionToken (hôte), gameMode, levels, questionCount, timePerQuestion}` (remplacement complet, pas de patch partiel) | `RoomState` | Ajouté en phase d'intégration frontend (absent du contrat initial) : permet à l'hôte de modifier les paramètres du salon depuis le Lobby, comme dans l'UI déjà validée. 403 si pas hôte, 409 si `status != LOBBY`. Diffusé sur `/topic/room/{code}` comme les autres actions. |
+| `POST /api/rooms/{code}/next-round` | `{sessionToken (hôte)}` | 204, pas de body | Ajouté le 2026-07-13 (retour de test Damien, voir §4bis) : avance immédiatement à la manche suivante sans attendre le délai de grâce/timeout. 403 si pas hôte, 409 si pas `IN_PROGRESS`. L'effet arrive via `/topic/room/{code}/round`, pas dans la réponse HTTP. |
 
 `RoomState` :
 ```json
@@ -114,7 +115,7 @@ Endpoint : `ws://localhost:8080/ws` en SockJS (utiliser `@stomp/stompjs` + `sock
 
 | Destination | Body | Effet |
 |---|---|---|
-| `/app/room/{code}/answer` | Quiz : `{sessionToken, selectedOption}` — Écriture : `{sessionToken, strokeScore: 0-100, strokeMistakes}` | Enregistre la réponse. Ignoré silencieusement si : déjà répondu, hors délai (`endsAt` dépassé), participant inconnu/exclu/parti. Dès que tous les participants actifs ont répondu (ou au timeout), le serveur avance automatiquement — **aucune action requise pour passer à la manche suivante**, le bouton "Question suivante"/auto-avance 10s du frontend actuel est obsolète et à retirer. |
+| `/app/room/{code}/answer` | Quiz : `{sessionToken, selectedOption}` — Écriture : `{sessionToken, strokeScore: 0-100, strokeMistakes}` | Enregistre la réponse. Ignoré silencieusement si : déjà répondu, hors délai (`endsAt` dépassé), participant inconnu/exclu/parti. **Revu le 2026-07-13** (retour de test Damien : l'avance instantanée dès que tout le monde répond ne convenait pas) : n'avance plus automatiquement à ce moment-là. Un délai de grâce de 10s démarre (`GameEngineService.ROUND_ADVANCE_GRACE_DELAY`), pendant lequel l'hôte peut avancer immédiatement via `POST /api/rooms/{code}/next-round` (voir §3) ; passé ce délai, avance automatique. Le timeout `endsAt` reste un filet de sécurité indépendant (avance quoi qu'il arrive si personne ne répond/n'agit). |
 | `/app/room/{code}/enter-lobby` | `{sessionToken}` | À envoyer quand le client affiche effectivement l'écran Lobby après un `RESULTS→LOBBY`. Fait passer *ce* participant de `VIEWING_RESULTS` à `IN_LOBBY` (chacun à son rythme, cf. §7.5 de SPECIFICATIONS_BACKEND.md). |
 
 **Important** : l'état de partie (manche en cours, qui a répondu) est gardé en mémoire côté serveur, pas en base — si le backend redémarre pendant une partie, la partie est perdue (acceptable en dev/démo, à garder en tête).
@@ -130,6 +131,18 @@ En branchant Quiz/Écriture/Résultats sur le vrai moteur de jeu, trois bugs bac
 Un salon créé avant cette migration reste indéfiniment bloqué en `IN_PROGRESS` si vous relancez `mvn spring-boot:run` après cette phase et retombez sur ce genre d'état : `UPDATE game_room SET status='LOBBY' WHERE code='...'` en direct, ou plus simplement en recréer un.
 
 **Course sur la 1ère manche après le lancement** : `startGame` déclenche le passage à `IN_PROGRESS` (broadcast `/topic/room/{code}`) puis la 1ère manche (broadcast `/topic/room/{code}/round`) séparément — rien ne garantit qu'un client qui vient de se (re)connecter à son WS capte les deux dans l'ordre. `LobbyScreen.tsx` gère ça en n'attendant pas seulement le changement de statut : il attend aussi d'avoir reçu la 1ère manche, puis la transmet à `QuizScreen`/`WritingScreen` via l'état de navigation React Router (`state: { firstRound }`) plutôt que de compter sur leur propre resouscription WS pour la recevoir (elle ne le pourrait pas — pas de `GET /round` pour la rattraper après coup, cf. gap ci-dessous). Le même souci existe pour `/topic/room/{code}/results` en toute fin de partie, réglé pareil (`state: { results }`).
+
+## 4ter. Retours de test post-intégration (2026-07-13, `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt`)
+
+Damien a testé l'appli déployée (PC en localhost + téléphone via GitHub Pages) et remonté une liste de retours. Traités dans ce passage :
+
+- **Bug réel, corrigé** : rejoindre un salon via lien direct restait bloqué indéfiniment après la saisie du nom invité (`useRoomConnection` ne relançait jamais le `joinRoom` — mauvaises dépendances d'effet React). `submitGuestName` (exposé par le hook) redéclenche correctement maintenant.
+- **Bug réel, corrigé** : comptages de kanji par niveau faux sur Accueil/Niveaux JLPT (recoupés avec `GET /api/kanji`, cf. `frontend/src/mocks/jlptLevels.ts`).
+- **Décision produit, appliquée** : l'avance automatique instantanée dès que tout le monde répond (mise en place en §4 lors du branchement initial) ne convenait pas — redonné à l'hôte, voir §3/§4 (`next-round`, `ROUND_ADVANCE_GRACE_DELAY`).
+- **Décision produit, appliquée** : menu "Classements" retiré de la navbar (pas de classement global prévu avant V2).
+- **Pas un bug de code** : "Inscription impossible" sur mobile via GitHub Pages — le build déployé pointe par défaut vers `http://localhost:8080`, injoignable depuis un téléphone (le backend n'est pas déployé publiquement). Palliatif ajouté : `frontend/src/lib/api.ts` accepte un paramètre d'URL `?api=http://<IP-LAN>:8080`, mémorisé en `localStorage` (`kanji-game:apiBaseUrl`), pour tester le site déployé contre un backend local en LAN. Nécessite que le PC et le téléphone soient sur le même Wi-Fi et que le pare-feu Windows autorise le port 8080 en entrée.
+
+**Pas encore traité** (features/refontes plus larges, à prioriser séparément) : stats de profil réelles, édition pseudo/email/mot de passe, réinitialisation de mot de passe par e-mail, page "Mini-jeux" avec explicatifs, page "Niveaux JLPT" avec liste de kanji par niveau, widget Quiz de la page d'accueil à aligner sur la vraie interface, navbar responsive mobile + mise en avant du pseudo connecté.
 
 ## 5. Ce qui n'est PAS encore fait côté backend (gaps connus)
 

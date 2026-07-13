@@ -70,6 +70,12 @@ export function replayGame(code: string, sessionToken: string): Promise<RoomStat
   return api.post(`/api/rooms/${code}/replay`, { sessionToken })
 }
 
+// Hôte uniquement : passe à la manche suivante sans attendre le délai de grâce/timeout.
+// Pas de RoomState en retour : l'effet arrive via /topic/room/{code}/round.
+export function advanceRound(code: string, sessionToken: string): Promise<void> {
+  return api.post(`/api/rooms/${code}/next-round`, { sessionToken })
+}
+
 export interface UpdateRoomSettings {
   gameMode: GameMode
   levels: JlptLevelId[]

@@ -20,7 +20,6 @@ export function TopNav() {
         <span>Accueil</span>
         <span>Mini-jeux</span>
         <span>Niveaux JLPT</span>
-        <span>Classements</span>
       </div>
       <div className={styles.actions}>
         <Link to="/profil" className={styles.loginLink}>
