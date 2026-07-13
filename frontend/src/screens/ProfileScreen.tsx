@@ -1,29 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TopNav } from '../components/TopNav'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { mockProfileStats } from '../mocks/profile'
-import { mockLobbyPlayers } from '../mocks/lobby'
 import { getObjectiveLevel, setObjectiveLevel } from '../lib/profile'
+import { updateObjectiveLevel } from '../lib/auth'
+import { getGuestName } from '../lib/guest'
+import { useAuth } from '../contexts/AuthContext'
 import styles from './ProfileScreen.module.css'
 
-const you = mockLobbyPlayers.find((p) => p.isYou)!
-
 export function ProfileScreen() {
+  const { profile, refreshProfile } = useAuth()
   const [objectiveLevel, setObjectiveLevelState] = useState<JlptLevelId>(getObjectiveLevel)
 
-  function selectObjective(level: JlptLevelId) {
+  // Le profil réel (si connecté) se charge de façon asynchrone après le montage ; une fois
+  // arrivé, son objectif JLPT (persisté côté serveur) prend le pas sur celui du localStorage.
+  useEffect(() => {
+    if (profile?.objectiveLevel) setObjectiveLevelState(profile.objectiveLevel)
+  }, [profile?.objectiveLevel])
+
+  async function selectObjective(level: JlptLevelId) {
     setObjectiveLevelState(level)
-    setObjectiveLevel(level)
+    if (profile) {
+      try {
+        await updateObjectiveLevel(level)
+        await refreshProfile()
+      } catch {
+        // Échec silencieux : l'affichage reste sur le niveau choisi, un prochain
+        // rafraîchissement de profil resynchronisera si besoin.
+      }
+    } else {
+      setObjectiveLevel(level)
+    }
   }
+
+  const displayName = profile?.pseudo ?? getGuestName() ?? 'Invité'
+  const initials = displayName.trim().slice(0, 2).toUpperCase()
 
   return (
     <div>
       <TopNav />
       <div className={styles.page}>
         <div className={styles.header}>
-          <div className={styles.avatar}>{you.initials}</div>
+          <div className={styles.avatar}>{initials}</div>
           <div>
-            <div className={styles.name}>{you.name}</div>
+            <div className={styles.name}>{displayName}</div>
             <div className={styles.memberSince}>
               Membre depuis {mockProfileStats.memberSince}
             </div>

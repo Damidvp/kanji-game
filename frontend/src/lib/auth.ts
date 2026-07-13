@@ -38,6 +38,10 @@ export function getProfile(): Promise<Profile> {
   return api.get<Profile>('/api/profile/me')
 }
 
+export function updateObjectiveLevel(objectiveLevel: NonNullable<Profile['objectiveLevel']>): Promise<Profile> {
+  return api.put<Profile>('/api/profile/objective-level', { objectiveLevel })
+}
+
 export function isAuthError(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status
 }
