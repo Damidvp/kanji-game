@@ -164,6 +164,8 @@ Les bots simulés (délais aléatoires, départs aléatoires) dans `QuizScreen.t
 4. ~~Client STOMP partagé~~ **Fait, validé 2026-07-12** (`frontend/src/hooks/useRoomSocket.ts` + `useRoomConnection.ts`).
 5. ~~Brancher `QuizScreen`/`WritingScreen`~~ **Fait, validé 2026-07-12** (parties Quiz et Écriture jouées jusqu'au bout en réel, y compris via timeout serveur). A nécessité un nouveau canal WS privé (`/answer-result/{participantId}`, voir §4) pour le feedback correct/faux immédiat du Quiz, absent du contrat d'origine.
 6. ~~Brancher `ResultsScreen`~~ **Fait, validé 2026-07-12.**
-7. `ProfileScreen` : reste à faire — soit construire les stats manquantes côté backend d'abord, soit brancher partiellement (`objectiveLevel` seulement) en attendant.
+7. ~~`ProfileScreen`~~ **Fait, validé 2026-07-12** — `objectiveLevel` branché sur `GET/PUT /api/profile/*` (comptes réels) et confirmé persistant après rechargement complet ; invités inchangés (localStorage, pas de compte). `gamesPlayed`/`averageScore`/`perLevel` restent mockés (gap §5, stats non construites côté backend).
+
+**Les 7 étapes de ce document sont maintenant faites.** Ce qui reste ouvert pour une session future : les stats de profil réelles (§5), les endpoints admin, la reconnexion WebSocket en pleine manche, et éventuellement durcir encore le protocole de manche (voir §4bis — le contournement `firstRound`/`results` via navigation React Router fonctionne mais un vrai `GET /api/rooms/{code}/round` réglerait aussi le cas "rafraîchir la page en pleine partie", non traité ici).
 
 Comme pour les phases précédentes : construire un écran, le vérifier soi-même dans le navigateur avec le backend réellement lancé (pas juste compiler), proposer à Damien pour validation avant de passer au suivant.
