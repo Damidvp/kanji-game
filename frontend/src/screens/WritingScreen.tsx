@@ -116,9 +116,22 @@ export function WritingScreen() {
   }
 
   // (Re)crée le writer HanziWriter à chaque nouvelle manche.
+  // Bug trouvé (2026-07-13, remonté par Damien : le dessin ne marche que sur la 1ère question) :
+  // tant que `roomState` n'a pas fini de charger (join REST asynchrone), le rendu ci-dessous
+  // retourne l'écran "Connexion à la manche…" — la <div ref={targetRef}> n'existe donc pas
+  // encore dans le DOM. Le tout premier passage de cet effet (déclenché dès que `round` est
+  // connu, immédiatement depuis l'état de navigation) trouvait `targetRef.current === null` et
+  // ne faisait rien ; comme ses dépendances ne portaient que sur `round.roundIndex` (qui ne
+  // change pas tant qu'on reste sur la même manche), l'effet ne se redéclenchait jamais une
+  // fois la ref réellement attachée. Les manches 2+ fonctionnaient car `roomState` était déjà
+  // chargé depuis longtemps à ce moment-là. `hasRoomState` force un second passage exactement
+  // une fois, quand la ref devient enfin disponible, sans se redéclencher à chaque mise à jour
+  // ultérieure de `roomState` (ce qui interromprait un tracé en cours).
+  const hasRoomState = roomState !== null
   useEffect(() => {
     if (!targetRef.current || !round) return
-    targetRef.current.innerHTML = ''
+    let cancelled = false
+    const container = targetRef.current
     firstTryCorrectRef.current = 0
     totalStrokesRef.current = 0
     validatedRef.current = false
@@ -127,7 +140,7 @@ export function WritingScreen() {
     setValidated(false)
     setLastScore(null)
 
-    const writer = HanziWriter.create(targetRef.current, round.kanji.character, {
+    const writer = HanziWriter.create(container, round.kanji.character, {
       width: CANVAS_SIZE,
       height: CANVAS_SIZE,
       padding: 24,
@@ -141,6 +154,7 @@ export function WritingScreen() {
     writerRef.current = writer
 
     writer.getCharacterData().then((data) => {
+      if (cancelled) return
       totalStrokesRef.current = data.strokes.length
       setTotalStrokesDisplay(data.strokes.length)
     })
@@ -148,10 +162,13 @@ export function WritingScreen() {
     startQuiz(writer)
 
     return () => {
+      cancelled = true
+      writer.cancelQuiz()
+      container.innerHTML = ''
       writerRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round?.roundIndex])
+  }, [round?.roundIndex, hasRoomState])
 
   // Tick + déclenchement du timeout dans le même effet (et non deux effets séparés réagissant
   // à `timeLeft`) pour éviter qu'un premier rendu à `timeLeft === 0` (valeur initiale, avant le

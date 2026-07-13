@@ -36,17 +36,19 @@ export function useRoomConnection(code: string | undefined) {
     }
     setNeedsGuestName(false)
     setError('')
-    let cancelled = false
-    joinRoom(code, sessionToken, guestName)
-      .then((state) => {
-        if (!cancelled) applyState(state)
+    // AbortController plutôt qu'un simple flag "cancelled" : en StrictMode (dev), cet effet est
+    // monté deux fois de suite au premier chargement, ce qui envoyait deux vraies requêtes
+    // /join concurrentes pour le même sessionToken — la première du lot pouvait échouer selon
+    // l'ordre d'arrivée côté serveur, affichant "salon introuvable" jusqu'à un Réessayer manuel.
+    // Ici, la requête du montage fantôme est réellement annulée, une seule requête aboutit.
+    const controller = new AbortController()
+    joinRoom(code, sessionToken, guestName, { signal: controller.signal })
+      .then((state) => applyState(state))
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setError('Ce salon est introuvable ou la partie a déjà commencé.')
       })
-      .catch(() => {
-        if (!cancelled) setError('Ce salon est introuvable ou la partie a déjà commencé.')
-      })
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [code, profile, authLoading, applyState, attempt])
 
   function submitGuestName(name: string) {

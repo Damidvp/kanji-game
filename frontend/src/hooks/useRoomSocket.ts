@@ -96,12 +96,18 @@ export function useRoomSocket(code: string, myParticipantId: number | null, hand
     return () => subscription.unsubscribe()
   }, [connected, myParticipantId, code])
 
+  // `client.publish()` throws synchronously ("There is no underlying STOMP connection") if
+  // called before the WebSocket handshake completes — guard on `.connected` rather than just
+  // `clientRef.current` truthiness (the Client object exists as soon as `activate()` is called,
+  // well before the connection is actually up).
   const sendAnswer = useCallback(
     (
       sessionToken: string,
       answer: { selectedOption: string } | { strokeScore: number; strokeMistakes: number },
     ) => {
-      clientRef.current?.publish({
+      const client = clientRef.current
+      if (!client?.connected) return
+      client.publish({
         destination: `/app/room/${code}/answer`,
         body: JSON.stringify({ sessionToken, ...answer }),
       })
@@ -111,7 +117,9 @@ export function useRoomSocket(code: string, myParticipantId: number | null, hand
 
   const sendEnterLobby = useCallback(
     (sessionToken: string) => {
-      clientRef.current?.publish({
+      const client = clientRef.current
+      if (!client?.connected) return
+      client.publish({
         destination: `/app/room/${code}/enter-lobby`,
         body: JSON.stringify({ sessionToken }),
       })

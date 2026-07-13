@@ -46,8 +46,13 @@ export function getRoom(code: string, sessionToken: string): Promise<RoomState> 
   return api.get(`/api/rooms/${code}?sessionToken=${encodeURIComponent(sessionToken)}`)
 }
 
-export function joinRoom(code: string, sessionToken: string, guestName?: string): Promise<RoomState> {
-  return api.post(`/api/rooms/${code}/join`, { sessionToken, guestName })
+export function joinRoom(
+  code: string,
+  sessionToken: string,
+  guestName?: string,
+  options?: RequestInit,
+): Promise<RoomState> {
+  return api.post(`/api/rooms/${code}/join`, { sessionToken, guestName }, options)
 }
 
 export function setReady(code: string, sessionToken: string, ready: boolean): Promise<RoomState> {

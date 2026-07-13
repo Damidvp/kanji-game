@@ -62,6 +62,7 @@ export function LobbyScreen() {
     { length: LOBBY_MAX_PLAYERS },
     (_, i) => activeParticipants[i] ?? null,
   )
+  const everyoneReady = activeParticipants.length > 0 && activeParticipants.every((p) => p.ready)
 
   function toggleReady() {
     if (!code || !you) return
@@ -319,9 +320,17 @@ export function LobbyScreen() {
 
           {you?.isHost && (
             <>
-              <Button variant="accent" className={styles.launchButton} onClick={launchGame}>
+              <Button
+                variant="accent"
+                className={styles.launchButton}
+                onClick={launchGame}
+                disabled={!everyoneReady}
+              >
                 Lancer la partie
               </Button>
+              {!everyoneReady && (
+                <div className={styles.error}>Tous les joueurs doivent être prêts pour lancer la partie.</div>
+              )}
               {launchError && <div className={styles.error}>{launchError}</div>}
             </>
           )}

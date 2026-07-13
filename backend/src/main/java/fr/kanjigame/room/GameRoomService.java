@@ -167,6 +167,12 @@ public class GameRoomService {
         if (room.getStatus() != RoomStatus.LOBBY) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La partie a déjà commencé");
         }
+        boolean everyoneReady = gameParticipantRepository.findByRoomIdOrderByJoinedAtAsc(room.getId()).stream()
+                .filter(p -> p.getStatus() != ParticipantStatus.LEFT && p.getStatus() != ParticipantStatus.KICKED)
+                .allMatch(GameParticipant::isReady);
+        if (!everyoneReady) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tous les joueurs doivent être prêts");
+        }
 
         room.setStatus(RoomStatus.IN_PROGRESS);
         room.setCurrentRoundIndex(0);
