@@ -32,7 +32,7 @@ export function QuizScreen() {
   const location = useLocation()
   const locState = (location.state as QuizLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, retry, applyState } =
     useRoomConnection(code)
 
   const [round, setRound] = useState<RoundPayload | null>(locState.firstRound ?? null)
@@ -82,12 +82,15 @@ export function QuizScreen() {
     return () => clearInterval(interval)
   }, [everyoneAnswered, round?.roundIndex])
 
+  // Se fige une fois que tout le monde a répondu : le compte à rebours de la question n'a plus
+  // de sens à ce stade (c'est le délai de grâce ci-dessus qui régit la suite), le laisser courir
+  // donnait l'impression d'un chrono qui ne s'arrête jamais.
   useEffect(() => {
-    if (!round) return
+    if (!round || everyoneAnswered) return
     setTimeLeft(computeTimeLeft(round))
     const interval = setInterval(() => setTimeLeft(computeTimeLeft(round)), 1000)
     return () => clearInterval(interval)
-  }, [round])
+  }, [round, everyoneAnswered])
 
   function selectAnswer(option: string) {
     if (selected || !round) return
@@ -112,9 +115,14 @@ export function QuizScreen() {
     return (
       <div className={styles.page}>
         <p>{error}</p>
-        <Button variant="primary" onClick={() => navigate('/')}>
-          Retour à l'accueil
-        </Button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Button variant="primary" onClick={retry}>
+            Réessayer
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Retour à l'accueil
+          </Button>
+        </div>
       </div>
     )
   }

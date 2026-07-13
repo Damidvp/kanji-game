@@ -109,12 +109,31 @@ public class GameRoomService {
     public RoomStateResponse leave(String code, String sessionToken) {
         GameRoom room = getRoomOrThrow(code);
         GameParticipant participant = requireParticipant(room, sessionToken);
+        boolean wasHost = participant.isHost();
         participant.setStatus(ParticipantStatus.LEFT);
         participant.setLeftAt(java.time.OffsetDateTime.now());
         gameParticipantRepository.save(participant);
+        if (wasHost) {
+            transferHostToNextActiveParticipant(room);
+        }
         RoomStateResponse response = broadcastAndReturn(room, sessionToken);
         gameEngineService.onParticipantInactive(code); // un départ peut compléter "tout le monde a répondu" (§7.2)
         return response;
+    }
+
+    /**
+     * Si l'hôte quitte (lobby ou partie en cours), transfère le rôle au participant actif
+     * suivant (le plus ancien arrivé) — sinon le salon reste bloqué : plus personne ne peut
+     * lancer/relancer la partie ni avancer les manches (bug remonté par Damien, 2026-07-13).
+     */
+    private void transferHostToNextActiveParticipant(GameRoom room) {
+        gameParticipantRepository.findByRoomIdOrderByJoinedAtAsc(room.getId()).stream()
+                .filter(p -> p.getStatus() != ParticipantStatus.LEFT && p.getStatus() != ParticipantStatus.KICKED)
+                .findFirst()
+                .ifPresent(next -> {
+                    next.setHost(true);
+                    gameParticipantRepository.save(next);
+                });
     }
 
     public RoomStateResponse kick(String code, String hostSessionToken, Long targetParticipantId) {

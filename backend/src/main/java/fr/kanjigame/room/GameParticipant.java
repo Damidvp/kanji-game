@@ -104,6 +104,10 @@ public class GameParticipant {
         return host;
     }
 
+    public void setHost(boolean host) {
+        this.host = host;
+    }
+
     public boolean isReady() {
         return ready;
     }

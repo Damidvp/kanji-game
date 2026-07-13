@@ -4,7 +4,7 @@ import { Button } from '../components/Button'
 import { GuestNameModal } from '../components/GuestNameModal'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
 import { getSessionToken } from '../lib/session'
-import { setReady, kickParticipant, startGame, updateRoomSettings, type GameMode } from '../lib/rooms'
+import { setReady, kickParticipant, startGame, updateRoomSettings, leaveRoom, type GameMode } from '../lib/rooms'
 import { useRoomSocket, type RoundPayload } from '../hooks/useRoomSocket'
 import { useRoomConnection } from '../hooks/useRoomConnection'
 import styles from './LobbyScreen.module.css'
@@ -27,7 +27,7 @@ export function LobbyScreen() {
   const { code } = useParams()
   const navigate = useNavigate()
 
-  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, retry, applyState } =
     useRoomConnection(code)
   const [copied, setCopied] = useState(false)
   const [firstRound, setFirstRound] = useState<RoundPayload | null>(null)
@@ -72,6 +72,12 @@ export function LobbyScreen() {
     if (!code) return
     if (!window.confirm(`Exclure ${player.name} du salon ?`)) return
     kickParticipant(code, getSessionToken(), player.id).then(applyState).catch(() => {})
+  }
+
+  function quitLobby() {
+    if (!code) return
+    leaveRoom(code, getSessionToken()).catch(() => {})
+    navigate('/')
   }
 
   function launchGame() {
@@ -129,9 +135,14 @@ export function LobbyScreen() {
     return (
       <div className={styles.page}>
         <p>{error}</p>
-        <Button variant="primary" onClick={() => navigate('/')}>
-          Retour à l'accueil
-        </Button>
+        <div className={styles.readyRow}>
+          <Button variant="primary" onClick={retry}>
+            Réessayer
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Retour à l'accueil
+          </Button>
+        </div>
       </div>
     )
   }
@@ -228,6 +239,9 @@ export function LobbyScreen() {
             <div className={styles.readyRow}>
               <Button variant={you.ready ? 'accent' : 'primary'} onClick={toggleReady}>
                 {you.ready ? '✓ Prêt' : 'Je suis prêt'}
+              </Button>
+              <Button variant="outline" onClick={quitLobby}>
+                Quitter le salon
               </Button>
             </div>
           )}

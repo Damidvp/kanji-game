@@ -14,11 +14,11 @@ export function useRoomConnection(code: string | undefined) {
   const [myParticipantId, setMyParticipantId] = useState<number | null>(null)
   const [needsGuestName, setNeedsGuestName] = useState(false)
   const [error, setError] = useState('')
-  // Incrémenté par submitGuestName pour redéclencher la tentative de connexion une fois le nom
-  // fourni — sans lui, l'effet ci-dessous (dont les dépendances ne changent pas quand on sort
-  // juste de l'état "needsGuestName") ne retentait jamais après la saisie, laissant l'écran
+  // Incrémenté par submitGuestName/retry pour redéclencher la tentative de connexion — sans lui,
+  // l'effet ci-dessous (dont les dépendances ne changent pas juste en sortant de l'état
+  // "needsGuestName", ou après une erreur transitoire) ne retentait jamais, laissant l'écran
   // bloqué indéfiniment (bug remonté par Damien : lien direct vers un salon → page vide).
-  const [guestNameAttempt, setGuestNameAttempt] = useState(0)
+  const [attempt, setAttempt] = useState(0)
 
   const applyState = useCallback((state: RoomState) => {
     setRoomState(state)
@@ -35,6 +35,7 @@ export function useRoomConnection(code: string | undefined) {
       return
     }
     setNeedsGuestName(false)
+    setError('')
     let cancelled = false
     joinRoom(code, sessionToken, guestName)
       .then((state) => {
@@ -46,12 +47,16 @@ export function useRoomConnection(code: string | undefined) {
     return () => {
       cancelled = true
     }
-  }, [code, profile, authLoading, applyState, guestNameAttempt])
+  }, [code, profile, authLoading, applyState, attempt])
 
   function submitGuestName(name: string) {
     setGuestName(name)
-    setGuestNameAttempt((n) => n + 1)
+    setAttempt((n) => n + 1)
   }
 
-  return { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState }
+  function retry() {
+    setAttempt((n) => n + 1)
+  }
+
+  return { roomState, myParticipantId, needsGuestName, submitGuestName, error, retry, applyState }
 }

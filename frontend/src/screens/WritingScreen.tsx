@@ -29,7 +29,7 @@ export function WritingScreen() {
   const location = useLocation()
   const locState = (location.state as WritingLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, retry, applyState } =
     useRoomConnection(code)
 
   const [round, setRound] = useState<RoundPayload | null>(locState.firstRound ?? null)
@@ -155,9 +155,11 @@ export function WritingScreen() {
 
   // Tick + déclenchement du timeout dans le même effet (et non deux effets séparés réagissant
   // à `timeLeft`) pour éviter qu'un premier rendu à `timeLeft === 0` (valeur initiale, avant le
-  // premier tick) ne déclenche un timeout immédiat et prématuré.
+  // premier tick) ne déclenche un timeout immédiat et prématuré. Se fige une fois que tout le
+  // monde a répondu : à ce stade `finishRound` a déjà été appelé pour ce joueur (validatedRef),
+  // et le chrono n'a plus de sens (c'est le délai de grâce ci-dessus qui régit la suite).
   useEffect(() => {
-    if (!round) return
+    if (!round || everyoneAnswered) return
     function tick() {
       if (!round) return
       const remaining = Math.max(0, Math.ceil((new Date(round.endsAt).getTime() - Date.now()) / 1000))
@@ -171,7 +173,7 @@ export function WritingScreen() {
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round?.roundIndex, round?.endsAt])
+  }, [round?.roundIndex, round?.endsAt, everyoneAnswered])
 
   function restartCharacter() {
     if (validated || !writerRef.current) return
@@ -198,9 +200,14 @@ export function WritingScreen() {
     return (
       <div className={styles.page}>
         <p>{error}</p>
-        <Button variant="primary" onClick={() => navigate('/')}>
-          Retour à l'accueil
-        </Button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Button variant="primary" onClick={retry}>
+            Réessayer
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Retour à l'accueil
+          </Button>
+        </div>
       </div>
     )
   }

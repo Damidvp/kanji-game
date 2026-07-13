@@ -29,7 +29,7 @@ export function ResultsScreen() {
   const location = useLocation()
   const locState = (location.state as ResultsLocationState) ?? {}
 
-  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, applyState } =
+  const { roomState, myParticipantId, needsGuestName, submitGuestName, error, retry, applyState } =
     useRoomConnection(code)
   const [results, setResults] = useState<ResultsPayload | null>(locState.results ?? null)
   const [autoReturnLeft, setAutoReturnLeft] = useState(AUTO_RETURN_SECONDS)
@@ -76,9 +76,14 @@ export function ResultsScreen() {
     return (
       <div className={styles.page}>
         <p>{error}</p>
-        <Button variant="primary" onClick={() => navigate('/')}>
-          Retour à l'accueil
-        </Button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <Button variant="primary" onClick={retry}>
+            Réessayer
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/')}>
+            Retour à l'accueil
+          </Button>
+        </div>
       </div>
     )
   }
