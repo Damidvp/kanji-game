@@ -1,4 +1,5 @@
 .nav {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -29,20 +30,128 @@
   cursor: pointer;
 }
 
+.userBadge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: #3a3733;
+}
+
+.userBadgeAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.userBadge strong {
+  color: var(--color-ink);
+}
+
+.logoutLink {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.logoutLink:hover {
+  color: var(--color-accent);
+}
+
+.menuToggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.menuToggle span {
+  display: block;
+  height: 2px;
+  background: var(--color-ink);
+  border-radius: 2px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.menuToggleOpen span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.menuToggleOpen span:nth-child(2) {
+  opacity: 0;
+}
+
+.menuToggleOpen span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.mobileMenu {
+  display: none;
+}
+
 @media (max-width: 900px) {
-  .links {
+  .links,
+  .actions {
     display: none;
   }
 
   .nav {
     padding: 16px 20px;
-    flex-wrap: wrap;
-    gap: 12px;
   }
-}
 
-@media (max-width: 480px) {
-  .loginLink {
-    display: none;
+  .menuToggle {
+    display: flex;
+  }
+
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-paper);
+    border-bottom: 1px solid var(--color-border);
+    padding: 20px;
+    font-size: 15px;
+    color: #3a3733;
+    z-index: 20;
+  }
+
+  .mobileTextButton {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 15px;
+    color: #3a3733;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mobilePlayButton {
+    width: 100%;
   }
 }

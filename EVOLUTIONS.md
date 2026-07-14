@@ -29,17 +29,15 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Navbar : responsive mobile + mise en avant du pseudo connecté
-- **Écran(s)** : global (TopNav)
-- **Demande** : Deux points distincts sur `components/TopNav.tsx` :
-  1. Certains liens de la navbar (Accueil/Mini-jeux/Niveaux JLPT — actuellement de simples `<span>` non cliquables, voir CSS `.links { display: none }` sous 900px) sont invisibles sur mobile. Prévoir une vraie navigation responsive (menu hamburger ou équivalent).
-  2. Une fois connecté, le pseudo actuel se noie visuellement parmi les autres liens de droite. Le mettre en évidence, ex. un message "Bonjour, `<pseudo>`" ou "Bienvenue, `<pseudo>`", pour qu'il soit clair immédiatement qu'on est bien connecté (remonté après un souci où une inscription réussie n'était pas assez visible dans l'UI).
-
 ---
 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Navbar : responsive mobile + mise en avant du pseudo connecté — 2026-07-14
+- **Écran(s)** : global (TopNav)
+- **Résultat** : sous 900px, un menu hamburger (animé en ✕ à l'ouverture) remplace les liens desktop, avec un panneau déroulant reprenant tous les liens/actions, qui se referme automatiquement après un clic. Le pseudo connecté est maintenant un badge distinct (avatar + "Bonjour, pseudo") en pastille bordée, remplaçant le lien "Profil" texte (clic → page profil) ; "Déconnexion" a été repoussé en texte discret pour ne plus rivaliser visuellement avec le badge (ajustement demandé par Damien après un premier passage où le "Bonjour" restait noyé parmi Profil/Déconnexion).
 
 ### Widget "Quiz Kanji" de la page d'accueil — 2026-07-14
 - **Écran(s)** : Accueil
