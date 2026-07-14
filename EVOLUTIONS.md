@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Page "Mini-jeux"
-- **Écran(s)** : global (nouvelle page) + navbar
-- **Demande** : Le lien "Mini-jeux" de la navbar ne mène nulle part actuellement. Créer une page qui présente chaque mini-jeu (Quiz Kanji, Écriture de kanji) avec un petit explicatif, et un bouton "Jouer"/"Essayer" par jeu qui crée un salon (comme `PlayButton` actuel) mais préconfiguré sur le mini-jeu correspondant plutôt que sur Quiz par défaut. Réutiliser `components/PlayButton.tsx` en le rendant paramétrable sur `gameMode`, ou dupliquer sa logique.
-
 ### Page "Niveaux JLPT"
 - **Écran(s)** : global (nouvelle page) + navbar + Accueil
 - **Demande** : Le bouton "Voir les niveaux" de l'Accueil et le lien "Niveaux JLPT" de la navbar doivent mener vers une page dédiée présentant les 5 niveaux JLPT : liste des kanji à étudier par niveau, correspondance avec les niveaux européens (CECRL), petit explicatif par niveau. Les kanji par niveau sont disponibles via `GET /api/kanji?levels=...` (déjà utilisé ailleurs, ex. `frontend/src/lib/kanji.ts`). La correspondance CECRL n'existe nulle part dans le code actuel — à documenter/trouver la table de correspondance usuelle JLPT↔CECRL.
@@ -52,6 +48,10 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Page "Mini-jeux" — 2026-07-14
+- **Écran(s)** : global (nouvelle page) + navbar
+- **Résultat** : nouvelle page `/mini-jeux` avec une carte par mini-jeu (Quiz Kanji, Écriture de kanji), explicatif court, bouton "Essayer" par jeu qui crée un salon préconfiguré sur le bon mode. `components/PlayButton.tsx` rendu paramétrable sur `gameMode` (réutilisé, pas dupliqué). Lien "Mini-jeux" de la navbar rendu cliquable (les liens "Accueil"/"Niveaux JLPT" restent à traiter avec la refonte responsive de la navbar).
 
 ### Réinitialisation de mot de passe par e-mail — 2026-07-14
 - **Écran(s)** : Connexion

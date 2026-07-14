@@ -5,18 +5,19 @@ import { GuestNameModal } from './GuestNameModal'
 import { useAuth } from '../contexts/AuthContext'
 import { getSessionToken } from '../lib/session'
 import { getGuestName, setGuestName } from '../lib/guest'
-import { createRoom } from '../lib/rooms'
+import { createRoom, type GameMode } from '../lib/rooms'
 
 interface PlayButtonProps {
   variant?: 'primary' | 'accent' | 'outline'
   className?: string
   children: ReactNode
+  gameMode?: GameMode
 }
 
-// Bouton "Jouer maintenant" partagé (Accueil + TopNav) : crée un nouveau salon avec des
-// paramètres par défaut et redirige vers son Lobby. Demande un nom d'invité une seule fois
-// si l'utilisateur n'a pas de compte, puis le mémorise pour les prochaines parties.
-export function PlayButton({ variant = 'accent', className, children }: PlayButtonProps) {
+// Bouton "Jouer maintenant" partagé (Accueil, TopNav, page Mini-jeux) : crée un nouveau salon
+// avec des paramètres par défaut et redirige vers son Lobby. Demande un nom d'invité une seule
+// fois si l'utilisateur n'a pas de compte, puis le mémorise pour les prochaines parties.
+export function PlayButton({ variant = 'accent', className, children, gameMode = 'QUIZ' }: PlayButtonProps) {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const [showModal, setShowModal] = useState(false)
@@ -28,7 +29,7 @@ export function PlayButton({ variant = 'accent', className, children }: PlayButt
     setError('')
     try {
       const { code } = await createRoom({
-        gameMode: 'QUIZ',
+        gameMode,
         levels: ['N5', 'N4'],
         questionCount: 20,
         timePerQuestion: 30,

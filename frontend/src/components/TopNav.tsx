@@ -18,7 +18,7 @@ export function TopNav() {
       <Logo />
       <div className={styles.links}>
         <span>Accueil</span>
-        <span>Mini-jeux</span>
+        <Link to="/mini-jeux">Mini-jeux</Link>
         <span>Niveaux JLPT</span>
       </div>
       <div className={styles.actions}>
