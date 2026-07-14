@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Réinitialisation de mot de passe par e-mail
-- **Écran(s)** : Connexion
-- **Demande** : Le lien "Mot de passe oublié ?" n'est pas fonctionnel (juste un `title` d'info-bulle). Nécessite l'envoi d'e-mails (choisir un service : SMTP classique, ou un fournisseur type Resend/SendGrid — aucun n'est configuré actuellement), un token de réinitialisation à durée de vie limitée côté backend, et un écran de saisie du nouveau mot de passe. Chantier plus lourd que les autres de cette liste (nouvelle dépendance externe + flux de sécurité complet) — probablement à traiter en dernier ou à cadrer avec Damien avant de commencer.
-
 ### Page "Mini-jeux"
 - **Écran(s)** : global (nouvelle page) + navbar
 - **Demande** : Le lien "Mini-jeux" de la navbar ne mène nulle part actuellement. Créer une page qui présente chaque mini-jeu (Quiz Kanji, Écriture de kanji) avec un petit explicatif, et un bouton "Jouer"/"Essayer" par jeu qui crée un salon (comme `PlayButton` actuel) mais préconfiguré sur le mini-jeu correspondant plutôt que sur Quiz par défaut. Réutiliser `components/PlayButton.tsx` en le rendant paramétrable sur `gameMode`, ou dupliquer sa logique.
@@ -56,6 +52,10 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Réinitialisation de mot de passe par e-mail — 2026-07-14
+- **Écran(s)** : Connexion
+- **Résultat** : lien "Mot de passe oublié ?" fonctionnel, deux nouveaux écrans (`/mot-de-passe-oublie`, `/reinitialiser-mot-de-passe`). Backend : `POST /api/auth/forgot-password` / `POST /api/auth/reset-password`, table `password_reset_token` (token à usage unique, valable 1h), envoi via l'API Resend (`ResendEmailSender`) — sans clé configurée, le lien est simplement loggé au lieu d'échouer, pour ne pas bloquer le dev local. Anti-énumération : même réponse générique que l'email existe ou non. Testé de bout en bout avec la vraie clé Resend de Damien (email réel reçu et confirmé).
 
 ### Édition du profil (pseudo, email, mot de passe) — 2026-07-14
 - **Écran(s)** : Profil

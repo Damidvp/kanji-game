@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/Logo'
 import { Button } from '../components/Button'
 import { isAuthError } from '../lib/auth'
@@ -150,9 +150,9 @@ export function AuthScreen() {
             {loginErrors.password && <div className={styles.error}>{loginErrors.password}</div>}
             {loginErrors.form && <div className={styles.error}>{loginErrors.form}</div>}
 
-            <div className={styles.forgotPassword} title="Fonctionnalité bientôt disponible">
+            <Link to="/mot-de-passe-oublie" className={styles.forgotPassword}>
               Mot de passe oublié ?
-            </div>
+            </Link>
 
             <Button type="submit" variant="primary" className={styles.submitButton} disabled={loginPending}>
               {loginPending ? 'Connexion…' : 'Se connecter'}

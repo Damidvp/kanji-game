@@ -122,7 +122,17 @@
   font-size: 13px;
   color: var(--color-accent);
   margin-bottom: 26px;
-  cursor: default;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.backLink {
+  text-align: left;
+  font-size: 13px;
+  color: var(--color-accent);
+  margin-top: 4px;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .submitButton {

@@ -72,3 +72,11 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
 export function isAuthError(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status
 }
+
+export function requestPasswordReset(email: string): Promise<void> {
+  return api.post<void>('/api/auth/forgot-password', { email })
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<void> {
+  return api.post<void>('/api/auth/reset-password', { token, newPassword })
+}
