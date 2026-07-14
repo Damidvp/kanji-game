@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { TopNav } from '../components/TopNav'
 import { Button } from '../components/Button'
 import { PlayButton } from '../components/PlayButton'
@@ -27,9 +28,9 @@ export function HomeScreen() {
           </p>
           <div className={styles.ctaRow}>
             <PlayButton variant="primary">Commencer à jouer</PlayButton>
-            <a href="#niveaux">
+            <Link to="/niveaux-jlpt">
               <Button variant="outline">Voir les niveaux</Button>
-            </a>
+            </Link>
           </div>
         </div>
 

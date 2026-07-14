@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Page "Niveaux JLPT"
-- **Écran(s)** : global (nouvelle page) + navbar + Accueil
-- **Demande** : Le bouton "Voir les niveaux" de l'Accueil et le lien "Niveaux JLPT" de la navbar doivent mener vers une page dédiée présentant les 5 niveaux JLPT : liste des kanji à étudier par niveau, correspondance avec les niveaux européens (CECRL), petit explicatif par niveau. Les kanji par niveau sont disponibles via `GET /api/kanji?levels=...` (déjà utilisé ailleurs, ex. `frontend/src/lib/kanji.ts`). La correspondance CECRL n'existe nulle part dans le code actuel — à documenter/trouver la table de correspondance usuelle JLPT↔CECRL.
-
 ### Widget "Quiz Kanji" de la page d'accueil
 - **Écran(s)** : Accueil
 - **Demande** : L'encart de prévisualisation "QUIZ KANJI · Question 3/10" sur la page d'accueil (`HomeScreen.tsx`) ne correspond plus à la vraie interface du Quiz une fois celle-ci branchée sur le vrai moteur de jeu (mise en page, données figées/mockées via `mockKanjiPool`). Le mettre à jour pour refléter fidèlement `QuizScreen.tsx` tel qu'il existe réellement aujourd'hui.
@@ -48,6 +44,10 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Page "Niveaux JLPT" — 2026-07-14
+- **Écran(s)** : global (nouvelle page) + navbar + Accueil
+- **Résultat** : nouvelle page `/niveaux-jlpt` avec, par niveau, la correspondance CECRL indicative (N5→A1 … N1→C1, table usuelle documentée dans le code — le JLPT n'a pas de correspondance officielle), un court explicatif, et la liste complète des kanji du niveau chargée à la demande via `GET /api/kanji?levels=...` (accordéon, un seul niveau ouvert à la fois — testé y compris sur N1/1161 kanji). Lien navbar et bouton "Voir les niveaux" de l'Accueil pointent désormais vers cette page. Corrigé au passage : le lien "Accueil" de la navbar n'était pas cliquable sur aucune page (bug signalé par Damien pendant la validation).
 
 ### Page "Mini-jeux" — 2026-07-14
 - **Écran(s)** : global (nouvelle page) + navbar

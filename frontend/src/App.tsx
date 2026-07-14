@@ -4,6 +4,7 @@ import { AuthScreen } from './screens/AuthScreen'
 import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen'
 import { ResetPasswordScreen } from './screens/ResetPasswordScreen'
 import { MiniGamesScreen } from './screens/MiniGamesScreen'
+import { JlptLevelsScreen } from './screens/JlptLevelsScreen'
 import { LobbyScreen } from './screens/LobbyScreen'
 import { QuizScreen } from './screens/QuizScreen'
 import { WritingScreen } from './screens/WritingScreen'
@@ -18,6 +19,7 @@ function App() {
       <Route path="/mot-de-passe-oublie" element={<ForgotPasswordScreen />} />
       <Route path="/reinitialiser-mot-de-passe" element={<ResetPasswordScreen />} />
       <Route path="/mini-jeux" element={<MiniGamesScreen />} />
+      <Route path="/niveaux-jlpt" element={<JlptLevelsScreen />} />
       <Route path="/profil" element={<ProfileScreen />} />
       <Route path="/lobby/:code" element={<LobbyScreen />} />
       <Route path="/lobby/:code/quiz" element={<QuizScreen />} />

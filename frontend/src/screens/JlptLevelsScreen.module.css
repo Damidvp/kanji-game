@@ -1,0 +1,123 @@
+.page {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 56px 56px 80px;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.subtitle {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  max-width: 640px;
+  margin: 0 0 40px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid;
+  padding: 24px 28px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.cardHeaderMain {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.levelId {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.levelLabel {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin-bottom: 4px;
+}
+
+.levelDescription {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  max-width: 560px;
+  line-height: 1.6;
+}
+
+.toggle {
+  background: none;
+  border: 1px solid var(--color-border-input);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+.kanjiGrid {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kanjiChip {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.loading {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .page {
+    padding: 40px 24px 60px;
+  }
+
+  .cardHeaderMain {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .cardHeaderMain {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
