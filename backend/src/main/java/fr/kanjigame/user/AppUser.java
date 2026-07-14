@@ -68,4 +68,8 @@ public class AppUser {
     public void setObjectiveLevel(JlptLevel objectiveLevel) {
         this.objectiveLevel = objectiveLevel;
     }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Stats de profil réelles
-- **Écran(s)** : Profil
-- **Demande** : `ProfileScreen.tsx` affiche encore des stats mockées (`gamesPlayed`, `averageScore`, `perLevel` — voir `frontend/src/mocks/profile.ts`). Les calculer réellement côté backend à partir de `game_participant`/`game_answer`/`game_round`, agrégées par `user_id` (donc uniquement pour les comptes, pas les invités). La formule (métrique = précision en %) est déjà documentée au §4 de `docs/backend/SPECIFICATIONS_BACKEND.md`. **Important (demande explicite de Damien)** : calculer à la volée par requête SQL d'agrégation, pas en écrivant une ligne récapitulative supplémentaire en base à chaque partie. `objectiveLevel` est déjà branché sur le réel (`GET/PUT /api/profile/*`), seules les stats manquent.
-
 ### Édition du profil (pseudo, email, mot de passe)
 - **Écran(s)** : Profil
 - **Demande** : Aucun moyen de modifier son pseudo, son adresse e-mail ou son mot de passe une fois le compte créé. Ajouter les endpoints backend correspondants (actuellement seuls `GET/PUT /api/profile/objective-level` existent côté profil) et l'UI associée. Le bouton actuel de sélection du niveau JLPT (chips cliquables) était aussi jugé peu clair comme mécanisme de mise à jour — voir si un pattern d'édition plus explicite (bouton "Modifier" / mode édition) devrait s'appliquer à l'ensemble de la section, pas seulement au niveau JLPT.
@@ -64,3 +60,7 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Stats de profil réelles — 2026-07-14
+- **Écran(s)** : Profil
+- **Résultat** : `GET /api/profile/me` (et `PUT /api/profile/objective-level`) renvoient désormais `gamesPlayed`, `averageScore` et `perLevel` calculés à la volée par agrégation SQL sur `game_answer`/`game_round`/`kanji` (précision % comme métrique commune Quiz/Écriture), plus `memberSince` réel. `ProfileScreen.tsx` affiche ces vraies valeurs ; les invités (sans compte) voient un message explicite plutôt que des stats inventées. `frontend/src/mocks/profile.ts` supprimé.

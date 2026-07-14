@@ -1,5 +1,6 @@
 package fr.kanjigame.game;
 
+import fr.kanjigame.kanji.JlptLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,5 +28,24 @@ public interface GameAnswerRepository extends JpaRepository<GameAnswer, Long> {
         Long getParticipantId();
         Integer getTotalPoints();
         Double getAvgStrokeScore();
+    }
+
+    @Query("""
+            SELECT a.round.room.id AS roomId,
+                   a.round.playCount AS playCount,
+                   a.round.kanji.jlptLevel AS jlptLevel,
+                   a.isCorrect AS isCorrect,
+                   a.strokeScore AS strokeScore
+            FROM GameAnswer a
+            WHERE a.participant.user.id = :userId
+            """)
+    List<UserAnswerStat> findAnswerStatsByUserId(@Param("userId") Long userId);
+
+    interface UserAnswerStat {
+        Long getRoomId();
+        Integer getPlayCount();
+        JlptLevel getJlptLevel();
+        Boolean getIsCorrect();
+        Integer getStrokeScore();
     }
 }

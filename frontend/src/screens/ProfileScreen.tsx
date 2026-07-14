@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { TopNav } from '../components/TopNav'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
-import { mockProfileStats } from '../mocks/profile'
 import { getObjectiveLevel, setObjectiveLevel } from '../lib/profile'
 import { updateObjectiveLevel } from '../lib/auth'
 import { getGuestName } from '../lib/guest'
@@ -44,9 +43,9 @@ export function ProfileScreen() {
           <div className={styles.avatar}>{initials}</div>
           <div>
             <div className={styles.name}>{displayName}</div>
-            <div className={styles.memberSince}>
-              Membre depuis {mockProfileStats.memberSince}
-            </div>
+            {profile && (
+              <div className={styles.memberSince}>Membre depuis {profile.memberSince}</div>
+            )}
             <div className={styles.objectiveRow}>
               <span className={styles.objectiveLabel}>Objectif JLPT</span>
               <div className={styles.chipsRow}>
@@ -73,37 +72,45 @@ export function ProfileScreen() {
           </div>
         </div>
 
-        <div className={styles.statsRow}>
-          <div className={styles.statCard}>
-            <div className={styles.statValue}>{mockProfileStats.gamesPlayed}</div>
-            <div className={styles.statLabel}>parties jouées</div>
-          </div>
-          <div className={styles.statCard}>
-            <div className={styles.statValue}>{mockProfileStats.averageScore}%</div>
-            <div className={styles.statLabel}>score moyen</div>
-          </div>
-        </div>
-
-        <div className={styles.sectionLabel}>SCORE MOYEN PAR NIVEAU JLPT</div>
-        <div className={styles.levelsList}>
-          {mockProfileStats.perLevel.map((stat) => {
-            const level = jlptLevels.find((l) => l.id === stat.level)!
-            return (
-              <div key={stat.level} className={styles.levelRow}>
-                <div className={styles.levelId} style={{ color: level.color }}>
-                  {stat.level}
-                </div>
-                <div className={styles.levelBarTrack}>
-                  <div
-                    className={styles.levelBarFill}
-                    style={{ width: `${stat.averageScore}%`, background: level.color }}
-                  />
-                </div>
-                <div className={styles.levelPercent}>{stat.averageScore}%</div>
+        {profile ? (
+          <>
+            <div className={styles.statsRow}>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>{profile.gamesPlayed}</div>
+                <div className={styles.statLabel}>parties jouées</div>
               </div>
-            )
-          })}
-        </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>{profile.averageScore}%</div>
+                <div className={styles.statLabel}>score moyen</div>
+              </div>
+            </div>
+
+            <div className={styles.sectionLabel}>SCORE MOYEN PAR NIVEAU JLPT</div>
+            <div className={styles.levelsList}>
+              {profile.perLevel.map((stat) => {
+                const level = jlptLevels.find((l) => l.id === stat.level)!
+                return (
+                  <div key={stat.level} className={styles.levelRow}>
+                    <div className={styles.levelId} style={{ color: level.color }}>
+                      {stat.level}
+                    </div>
+                    <div className={styles.levelBarTrack}>
+                      <div
+                        className={styles.levelBarFill}
+                        style={{ width: `${stat.averageScore}%`, background: level.color }}
+                      />
+                    </div>
+                    <div className={styles.levelPercent}>{stat.averageScore}%</div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <div className={styles.guestNotice}>
+            Connecte-toi pour suivre tes statistiques : parties jouées, score moyen et progression par niveau JLPT.
+          </div>
+        )}
       </div>
     </div>
   )

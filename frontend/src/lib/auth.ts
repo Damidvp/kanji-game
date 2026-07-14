@@ -28,10 +28,19 @@ export async function login(email: string, password: string): Promise<void> {
   localStorage.setItem(AUTH_TOKEN_KEY, token)
 }
 
+export interface ProfileLevelStat {
+  level: 'N5' | 'N4' | 'N3' | 'N2' | 'N1'
+  averageScore: number
+}
+
 export interface Profile {
   pseudo: string
   email: string
   objectiveLevel: 'N5' | 'N4' | 'N3' | 'N2' | 'N1' | null
+  memberSince: string
+  gamesPlayed: number
+  averageScore: number
+  perLevel: ProfileLevelStat[]
 }
 
 export function getProfile(): Promise<Profile> {
