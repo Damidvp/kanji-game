@@ -26,16 +26,41 @@
   flex-shrink: 0;
 }
 
+.headerBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
 .name {
   font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 600;
 }
 
+.editToggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
 .memberSince {
   font-size: 13px;
   color: var(--color-text-secondary);
   margin-top: 2px;
+}
+
+.email {
+  font-size: 13px;
+  color: var(--color-text-secondary);
 }
 
 .objectiveRow {
@@ -87,6 +112,48 @@
 .statLabel {
   font-size: 13px;
   color: var(--color-text-tertiary);
+  margin-top: 6px;
+}
+
+.editForm {
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.editLabel {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.editInput {
+  border: 1px solid var(--color-border-input);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--color-ink);
+  background: var(--color-white);
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+}
+
+.editInput:focus {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+
+.editError {
+  font-size: 12px;
+  color: var(--color-accent);
+  margin: -12px 0 14px;
+}
+
+.editActions {
+  display: flex;
+  gap: 10px;
   margin-top: 6px;
 }
 

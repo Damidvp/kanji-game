@@ -53,12 +53,24 @@ public class AppUser {
         return pseudo;
     }
 
+    public void setPseudo(String pseudo) {
+        this.pseudo = pseudo;
+    }
+
     public String getEmail() {
         return email;
     }
 
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 
     public JlptLevel getObjectiveLevel() {

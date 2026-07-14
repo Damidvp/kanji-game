@@ -51,6 +51,24 @@ export function updateObjectiveLevel(objectiveLevel: NonNullable<Profile['object
   return api.put<Profile>('/api/profile/objective-level', { objectiveLevel })
 }
 
+export interface UpdateProfileInput {
+  pseudo: string
+  email: string
+  currentPassword: string
+  newPassword?: string
+}
+
+interface UpdateProfileResponse {
+  profile: Profile
+  token: string
+}
+
+export async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
+  const { profile, token } = await api.put<UpdateProfileResponse>('/api/profile', input)
+  localStorage.setItem(AUTH_TOKEN_KEY, token)
+  return profile
+}
+
 export function isAuthError(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status
 }

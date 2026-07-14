@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Édition du profil (pseudo, email, mot de passe)
-- **Écran(s)** : Profil
-- **Demande** : Aucun moyen de modifier son pseudo, son adresse e-mail ou son mot de passe une fois le compte créé. Ajouter les endpoints backend correspondants (actuellement seuls `GET/PUT /api/profile/objective-level` existent côté profil) et l'UI associée. Le bouton actuel de sélection du niveau JLPT (chips cliquables) était aussi jugé peu clair comme mécanisme de mise à jour — voir si un pattern d'édition plus explicite (bouton "Modifier" / mode édition) devrait s'appliquer à l'ensemble de la section, pas seulement au niveau JLPT.
-
 ### Réinitialisation de mot de passe par e-mail
 - **Écran(s)** : Connexion
 - **Demande** : Le lien "Mot de passe oublié ?" n'est pas fonctionnel (juste un `title` d'info-bulle). Nécessite l'envoi d'e-mails (choisir un service : SMTP classique, ou un fournisseur type Resend/SendGrid — aucun n'est configuré actuellement), un token de réinitialisation à durée de vie limitée côté backend, et un écran de saisie du nouveau mot de passe. Chantier plus lourd que les autres de cette liste (nouvelle dépendance externe + flux de sécurité complet) — probablement à traiter en dernier ou à cadrer avec Damien avant de commencer.
@@ -60,6 +56,10 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Édition du profil (pseudo, email, mot de passe) — 2026-07-14
+- **Écran(s)** : Profil
+- **Résultat** : nouvel endpoint `PUT /api/profile` (pseudo, email, mot de passe actuel obligatoire pour confirmer, nouveau mot de passe optionnel), avec contrôle d'unicité et réémission d'un JWT si l'email change. Côté UI, un bouton "Modifier" unique bascule toute la section profil (pseudo, email, mot de passe, objectif JLPT) en mode édition avec Enregistrer/Annuler, remplaçant les chips JLPT cliquables en instantané (gardées telles quelles pour les invités, qui n'ont pas de compte à éditer).
 
 ### Stats de profil réelles — 2026-07-14
 - **Écran(s)** : Profil
