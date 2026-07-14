@@ -29,10 +29,6 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
 
-### Widget "Quiz Kanji" de la page d'accueil
-- **Écran(s)** : Accueil
-- **Demande** : L'encart de prévisualisation "QUIZ KANJI · Question 3/10" sur la page d'accueil (`HomeScreen.tsx`) ne correspond plus à la vraie interface du Quiz une fois celle-ci branchée sur le vrai moteur de jeu (mise en page, données figées/mockées via `mockKanjiPool`). Le mettre à jour pour refléter fidèlement `QuizScreen.tsx` tel qu'il existe réellement aujourd'hui.
-
 ### Navbar : responsive mobile + mise en avant du pseudo connecté
 - **Écran(s)** : global (TopNav)
 - **Demande** : Deux points distincts sur `components/TopNav.tsx` :
@@ -44,6 +40,10 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Widget "Quiz Kanji" de la page d'accueil — 2026-07-14
+- **Écran(s)** : Accueil
+- **Résultat** : l'encart de prévisualisation de `HomeScreen.tsx` reflète désormais la vraie structure de `QuizScreen.tsx` : progression "Question 3 / 10" avec barre, encarts TEMPS RESTANT/SCORE, lectures on/kun côte à côte, et le vrai libellé de question ("Quelle est la bonne signification ?") — au lieu de l'ancien format figé qui ne correspondait plus au moteur de jeu réel.
 
 ### Page "Niveaux JLPT" — 2026-07-14
 - **Écran(s)** : global (nouvelle page) + navbar + Accueil

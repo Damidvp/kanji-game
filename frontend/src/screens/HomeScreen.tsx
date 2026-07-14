@@ -36,14 +36,38 @@ export function HomeScreen() {
 
         <div className={styles.previewFrame}>
           <div className={styles.previewCard}>
-            <div className={styles.previewHeader}>
-              <span>QUIZ KANJI · Question 3/10</span>
+            <div className={styles.previewProgressRow}>
+              <span className={styles.previewProgressText}>
+                Question <strong>3</strong> / 10
+              </span>
               <span>{previewKanji.jlptLevel}</span>
             </div>
+            <div className={styles.previewProgressTrack}>
+              <div className={styles.previewProgressFill} style={{ width: '30%' }} />
+            </div>
+
+            <div className={styles.previewStatsRow}>
+              <div className={styles.previewStatBox}>
+                <div className={styles.previewStatLabel}>TEMPS RESTANT</div>
+                <div className={styles.previewStatValue}>18s</div>
+              </div>
+              <div className={styles.previewStatBox}>
+                <div className={styles.previewStatLabel}>SCORE</div>
+                <div className={styles.previewStatValue}>740</div>
+              </div>
+            </div>
+
             <div className={styles.previewKanji}>{previewKanji.character}</div>
             <div className={styles.previewReadings}>
-              <span>on: {previewKanji.onyomi}</span>&nbsp;·&nbsp;<span>kun: {previewKanji.kunyomi}</span>
+              <span>
+                <strong>on</strong>　{previewKanji.onyomi}
+              </span>
+              <span>
+                <strong>kun</strong>　{previewKanji.kunyomi}
+              </span>
             </div>
+
+            <div className={styles.previewQuestion}>Quelle est la bonne signification ?</div>
             <div className={styles.previewOptions}>
               {previewOptions.map((option) => {
                 const isCorrect = option === previewKanji.meaningFr
