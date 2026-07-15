@@ -29,15 +29,15 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 *(entrées ajoutées le 2026-07-14, suite à un nouveau round de tests de Damien après la fermeture de la file précédente.)*
 
-### Traductions françaises des kanji
-- **Écran(s)** : global (données)
-- **Demande** : Les significations des kanji sont encore en anglais partout dans l'app (`meanings_fr = meanings_en`, placeholder posé en attendant une clé DeepL — cf §6 de `docs/backend/SPECIFICATIONS_BACKEND.md`). Mettre en place la vraie traduction FR.
-
 ---
 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Traductions françaises des kanji — 2026-07-15
+- **Écran(s)** : global (données)
+- **Résultat** : intégration DeepL (`DeepLClient`, `KanjiTranslationService`), déclenchée manuellement via `mvn spring-boot:run -Dspring-boot.run.arguments=--kanji.translate.enabled=true` (même convention que l'import kanji). Scope volontairement limité à `kanji.meanings_fr` (2140 lignes) — les mots associés (`kanji_word`, ~443k lignes) ne sont traduits nulle part car non exposés par le frontend actuellement, décision actée avec Damien pour ne pas gâcher le quota gratuit. Sans clé configurée, la traduction est simplement ignorée (`meanings_fr` reste = `meanings_en`) plutôt que d'échouer. Exécuté avec la vraie clé de Damien : les 2140 kanji sont traduits (passage en traitement séquentiel + retry après un premier essai qui butait sur le rate-limit 429 du palier gratuit DeepL en concurrence). Vérifié en jouant une vraie partie de Quiz : propositions et bonne réponse en français.
 
 ### Accès au Profil pour les invités — 2026-07-14
 - **Écran(s)** : Profil / global

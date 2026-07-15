@@ -12,4 +12,6 @@ public interface KanjiRepository extends JpaRepository<Kanji, Long> {
     boolean existsByCharacter(String character);
 
     List<Kanji> findByJlptLevelIn(List<JlptLevel> levels);
+
+    List<Kanji> findByTranslationReviewedFalse();
 }
