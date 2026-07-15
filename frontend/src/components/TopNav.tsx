@@ -46,14 +46,9 @@ export function TopNav() {
             </button>
           </>
         ) : (
-          <>
-            <Link to="/profil" className={styles.loginLink}>
-              Profil
-            </Link>
-            <Link to="/connexion" className={styles.loginLink}>
-              Connexion
-            </Link>
-          </>
+          <Link to="/connexion" className={styles.loginLink}>
+            Connexion
+          </Link>
         )}
         <PlayButton variant="accent">Jouer maintenant</PlayButton>
       </div>
@@ -94,14 +89,9 @@ export function TopNav() {
               </button>
             </>
           ) : (
-            <>
-              <Link to="/profil" onClick={closeMenu}>
-                Profil
-              </Link>
-              <Link to="/connexion" onClick={closeMenu}>
-                Connexion
-              </Link>
-            </>
+            <Link to="/connexion" onClick={closeMenu}>
+              Connexion
+            </Link>
           )}
           <PlayButton variant="accent" className={styles.mobilePlayButton}>
             Jouer maintenant

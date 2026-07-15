@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { TopNav } from '../components/TopNav'
 import { Button } from '../components/Button'
 import { jlptLevels, type JlptLevelId } from '../mocks/jlptLevels'
-import { getObjectiveLevel, setObjectiveLevel } from '../lib/profile'
 import { updateObjectiveLevel, updateProfile, isAuthError } from '../lib/auth'
-import { getGuestName } from '../lib/guest'
 import { useAuth } from '../contexts/AuthContext'
 import styles from './ProfileScreen.module.css'
 
@@ -21,19 +20,20 @@ function isValidEmail(value: string) {
 }
 
 export function ProfileScreen() {
-  const { profile, refreshProfile } = useAuth()
-  const [objectiveLevel, setObjectiveLevelState] = useState<JlptLevelId>(getObjectiveLevel)
+  const { profile, loading, refreshProfile } = useAuth()
+  const navigate = useNavigate()
+  const [objectiveLevel, setObjectiveLevelState] = useState<JlptLevelId>('N3')
 
-  // Le profil réel (si connecté) se charge de façon asynchrone après le montage ; une fois
-  // arrivé, son objectif JLPT (persisté côté serveur) prend le pas sur celui du localStorage.
+  // Page réservée aux comptes : un invité qui atterrit ici (lien direct, ancien favori...) est
+  // renvoyé à l'accueil dès que l'état d'authentification est connu (pas avant, sinon un compte
+  // en cours de chargement serait redirigé à tort au premier rendu).
+  useEffect(() => {
+    if (!loading && !profile) navigate('/', { replace: true })
+  }, [loading, profile, navigate])
+
   useEffect(() => {
     if (profile?.objectiveLevel) setObjectiveLevelState(profile.objectiveLevel)
   }, [profile?.objectiveLevel])
-
-  function selectGuestObjective(level: JlptLevelId) {
-    setObjectiveLevelState(level)
-    setObjectiveLevel(level)
-  }
 
   const [editing, setEditing] = useState(false)
   const [editPseudo, setEditPseudo] = useState('')
@@ -101,8 +101,9 @@ export function ProfileScreen() {
     }
   }
 
-  const displayName = profile?.pseudo ?? getGuestName() ?? 'Invité'
-  const initials = displayName.trim().slice(0, 2).toUpperCase()
+  if (!profile) return null
+
+  const initials = profile.pseudo.trim().slice(0, 2).toUpperCase()
 
   return (
     <div>
@@ -211,43 +212,30 @@ export function ProfileScreen() {
             ) : (
               <>
                 <div className={styles.nameRow}>
-                  <div className={styles.name}>{displayName}</div>
-                  {profile && (
-                    <button type="button" className={styles.editToggle} onClick={startEditing}>
-                      Modifier
-                    </button>
-                  )}
+                  <div className={styles.name}>{profile.pseudo}</div>
+                  <button type="button" className={styles.editToggle} onClick={startEditing}>
+                    Modifier
+                  </button>
                 </div>
-                {profile && (
-                  <>
-                    <div className={styles.memberSince}>Membre depuis {profile.memberSince}</div>
-                    <div className={styles.email}>{profile.email}</div>
-                  </>
-                )}
+                <div className={styles.memberSince}>Membre depuis {profile.memberSince}</div>
+                <div className={styles.email}>{profile.email}</div>
                 <div className={styles.objectiveRow}>
                   <span className={styles.objectiveLabel}>Objectif JLPT</span>
                   <div className={styles.chipsRow}>
                     {jlptLevels.map((level) => {
                       const selected = level.id === objectiveLevel
-                      const chipStyle = {
-                        borderColor: level.color,
-                        background: selected ? level.color : 'transparent',
-                        color: selected ? '#fff' : level.color,
-                      }
-                      return profile ? (
-                        <div key={level.id} className={styles.chip} style={chipStyle}>
-                          {level.id}
-                        </div>
-                      ) : (
-                        <button
+                      return (
+                        <div
                           key={level.id}
-                          type="button"
                           className={styles.chip}
-                          style={chipStyle}
-                          onClick={() => selectGuestObjective(level.id)}
+                          style={{
+                            borderColor: level.color,
+                            background: selected ? level.color : 'transparent',
+                            color: selected ? '#fff' : level.color,
+                          }}
                         >
                           {level.id}
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
@@ -257,45 +245,37 @@ export function ProfileScreen() {
           </div>
         </div>
 
-        {profile ? (
-          <>
-            <div className={styles.statsRow}>
-              <div className={styles.statCard}>
-                <div className={styles.statValue}>{profile.gamesPlayed}</div>
-                <div className={styles.statLabel}>parties jouées</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statValue}>{profile.averageScore}%</div>
-                <div className={styles.statLabel}>score moyen</div>
-              </div>
-            </div>
-
-            <div className={styles.sectionLabel}>SCORE MOYEN PAR NIVEAU JLPT</div>
-            <div className={styles.levelsList}>
-              {profile.perLevel.map((stat) => {
-                const level = jlptLevels.find((l) => l.id === stat.level)!
-                return (
-                  <div key={stat.level} className={styles.levelRow}>
-                    <div className={styles.levelId} style={{ color: level.color }}>
-                      {stat.level}
-                    </div>
-                    <div className={styles.levelBarTrack}>
-                      <div
-                        className={styles.levelBarFill}
-                        style={{ width: `${stat.averageScore}%`, background: level.color }}
-                      />
-                    </div>
-                    <div className={styles.levelPercent}>{stat.averageScore}%</div>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        ) : (
-          <div className={styles.guestNotice}>
-            Connecte-toi pour suivre tes statistiques : parties jouées, score moyen et progression par niveau JLPT.
+        <div className={styles.statsRow}>
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{profile.gamesPlayed}</div>
+            <div className={styles.statLabel}>parties jouées</div>
           </div>
-        )}
+          <div className={styles.statCard}>
+            <div className={styles.statValue}>{profile.averageScore}%</div>
+            <div className={styles.statLabel}>score moyen</div>
+          </div>
+        </div>
+
+        <div className={styles.sectionLabel}>SCORE MOYEN PAR NIVEAU JLPT</div>
+        <div className={styles.levelsList}>
+          {profile.perLevel.map((stat) => {
+            const level = jlptLevels.find((l) => l.id === stat.level)!
+            return (
+              <div key={stat.level} className={styles.levelRow}>
+                <div className={styles.levelId} style={{ color: level.color }}>
+                  {stat.level}
+                </div>
+                <div className={styles.levelBarTrack}>
+                  <div
+                    className={styles.levelBarFill}
+                    style={{ width: `${stat.averageScore}%`, background: level.color }}
+                  />
+                </div>
+                <div className={styles.levelPercent}>{stat.averageScore}%</div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
