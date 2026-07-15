@@ -208,9 +208,10 @@ export function QuizScreen() {
           <div className={styles.optionsGrid}>
             {(round.options ?? []).map((option) => {
               const isSelected = option === selected
+              const isCorrectOption = answered && answerResult != null && option === answerResult.correctOption
               let optionClass = styles.option
               if (answered) {
-                if (isSelected && answerResult?.correct) optionClass = `${styles.option} ${styles.optionCorrect}`
+                if (isCorrectOption) optionClass = `${styles.option} ${styles.optionCorrect}`
                 else if (isSelected) optionClass = `${styles.option} ${styles.optionWrong}`
                 else optionClass = `${styles.option} ${styles.optionDisabled}`
               }
@@ -223,7 +224,8 @@ export function QuizScreen() {
                   disabled={answered}
                 >
                   {option}
-                  {answered && isSelected ? (answerResult?.correct ? ' ✓' : ' ✕') : ''}
+                  {isCorrectOption ? ' ✓' : ''}
+                  {answered && isSelected && !isCorrectOption ? ' ✕' : ''}
                 </button>
               )
             })}

@@ -137,7 +137,7 @@ public class GameEngineService {
 
         if (room.getGameMode() == GameMode.QUIZ) {
             messagingTemplate.convertAndSend("/topic/room/" + code + "/answer-result/" + participant.getId(),
-                    new AnswerResultBroadcast(round.getRoundIndex(), correct, points));
+                    new AnswerResultBroadcast(round.getRoundIndex(), correct, points, state.correctOption));
         }
 
         long activeCount = gameParticipantRepository.countByRoomIdAndStatusNotIn(room.getId(),

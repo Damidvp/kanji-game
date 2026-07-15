@@ -27,13 +27,25 @@ Ajouter une nouvelle entrée sous **"À traiter"**, avec le gabarit ci-dessous. 
 
 ## À traiter
 
-*(entrées ci-dessous ajoutées le 2026-07-13, suite à deux rounds de tests post-intégration de Damien sur `docs/test-after-integration/TESTS_AFTER_INTEGRATION.txt` — les bugs de ce fichier ont déjà été corrigés, seules les vraies évolutions/nouvelles fonctionnalités restent ici. Lire `docs/backend/FRONTEND_INTEGRATION.md` d'abord pour l'état exact de l'API et du frontend au moment de la rédaction.)*
+*(entrées ajoutées le 2026-07-14, suite à un nouveau round de tests de Damien après la fermeture de la file précédente.)*
+
+### Accès au Profil pour les invités
+- **Écran(s)** : Profil / global
+- **Demande** : La page Profil ne devrait pas être accessible aux joueurs invités (sans compte) — actuellement elle affiche un message générique à la place des stats mais reste consultable. Le pseudo d'un invité doit continuer à se définir uniquement au moment où il rejoint ou crée un salon (déjà en place), pas via la page Profil.
+
+### Traductions françaises des kanji
+- **Écran(s)** : global (données)
+- **Demande** : Les significations des kanji sont encore en anglais partout dans l'app (`meanings_fr = meanings_en`, placeholder posé en attendant une clé DeepL — cf §6 de `docs/backend/SPECIFICATIONS_BACKEND.md`). Mettre en place la vraie traduction FR.
 
 ---
 
 ## Traité
 
 *(les entrées terminées sont déplacées ici, avec la date)*
+
+### Bonne réponse non affichée en cas d'erreur (Quiz) — 2026-07-14
+- **Écran(s)** : Quiz
+- **Résultat** : `AnswerResultBroadcast` (backend) inclut désormais la bonne réponse, envoyée uniquement au joueur concerné (canal privé scopé par participant) au moment où il répond — les autres joueurs n'y ont toujours pas accès avant d'avoir répondu eux-mêmes. Côté UI, la bonne option s'affiche en vert avec ✓ même si ce n'est pas celle sélectionnée, en plus du ✕ rouge sur le choix erroné.
 
 ### Navbar : responsive mobile + mise en avant du pseudo connecté — 2026-07-14
 - **Écran(s)** : global (TopNav)

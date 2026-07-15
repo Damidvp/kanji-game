@@ -31,6 +31,7 @@ export interface AnswerResultPayload {
   roundIndex: number
   correct: boolean
   points: number
+  correctOption: string
 }
 
 interface RoomSocketHandlers {
